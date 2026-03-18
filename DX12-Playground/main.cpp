@@ -117,6 +117,15 @@ void EnableDebugLayer()
     ComPtr<ID3D12Debug> debugInterface;
     ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
     debugInterface->EnableDebugLayer();
+
+    // GPU-based validation catches invalid API usage that only manifests on the GPU
+    // (e.g. out-of-bounds buffer reads, uninitialized descriptors). Significantly
+    // slower than the CPU debug layer — disable if frame rate becomes unusable.
+    ComPtr<ID3D12Debug1> debugInterface1;
+    if (SUCCEEDED(debugInterface.As(&debugInterface1)))
+    {
+        debugInterface1->SetEnableGPUBasedValidation(TRUE);
+    }
 #endif
 }
 
@@ -195,16 +204,32 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
     {
         ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter1)));
         ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
+
+        DXGI_ADAPTER_DESC1 desc;
+        dxgiAdapter4->GetDesc1(&desc);
+        wchar_t buf[256];
+        swprintf_s(buf, L"[DX12] Using WARP adapter: %s | VRAM: %zu MB\n",
+            desc.Description, desc.DedicatedVideoMemory / (1024 * 1024));
+        OutputDebugStringW(buf);
     }
     else
     {
+        OutputDebugStringA("[DX12] Enumerating adapters:\n");
         SIZE_T maxDedicatedVideoMemory = 0;
         for (UINT i = 0; dxgiFactory->EnumAdapters1(i, &dxgiAdapter1) != DXGI_ERROR_NOT_FOUND; ++i)
         {
             DXGI_ADAPTER_DESC1 dxgiAdapterDesc1;
             dxgiAdapter1->GetDesc1(&dxgiAdapterDesc1);
 
-            // Check to see if the adapter can create a D3D12 device without actually 
+            wchar_t buf[256];
+            swprintf_s(buf, L"  [%u] %s | VRAM: %zu MB%s\n",
+                i,
+                dxgiAdapterDesc1.Description,
+                dxgiAdapterDesc1.DedicatedVideoMemory / (1024 * 1024),
+                (dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? L" [SOFTWARE]" : L"");
+            OutputDebugStringW(buf);
+
+            // Check to see if the adapter can create a D3D12 device without actually
             // creating it. The adapter with the largest dedicated video memory
             // is favored.
             if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
@@ -215,6 +240,17 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
                 maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
                 ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
             }
+        }
+
+        if (dxgiAdapter4)
+        {
+            DXGI_ADAPTER_DESC1 selectedDesc;
+            dxgiAdapter4->GetDesc1(&selectedDesc);
+            wchar_t buf[256];
+            swprintf_s(buf, L"[DX12] Selected adapter: %s | VRAM: %zu MB\n",
+                selectedDesc.Description,
+                selectedDesc.DedicatedVideoMemory / (1024 * 1024));
+            OutputDebugStringW(buf);
         }
     }
 
