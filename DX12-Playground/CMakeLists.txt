@@ -17,6 +17,25 @@ add_subdirectory( Engine )
 add_subdirectory( Sample )
 
 # Set the startup project.
-set_directory_properties( PROPERTIES 
+set_directory_properties( PROPERTIES
     VS_STARTUP_PROJECT Sample
 )
+
+# clang-format target — run: cmake --build . --target format
+find_program( CLANG_FORMAT_EXE NAMES clang-format )
+if( CLANG_FORMAT_EXE )
+    file( GLOB_RECURSE FORMAT_SOURCE_FILES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Include/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Sample/Include/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Sample/Source/*.cpp
+    )
+    add_custom_target( format
+        COMMAND ${CLANG_FORMAT_EXE} -i ${FORMAT_SOURCE_FILES}
+        COMMENT "Running clang-format on all source files..."
+        VERBATIM
+    )
+    set_target_properties( format PROPERTIES FOLDER "Utility" )
+else()
+    message( STATUS "clang-format not found — 'format' target unavailable" )
+endif()
