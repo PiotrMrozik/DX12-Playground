@@ -1,0 +1,44 @@
+---
+Language: Cpp
+BasedOnStyle: Microsoft
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+NamespaceIndentation: None
+
+# Line length
+ColumnLimit: 120
+
+# Braces — Allman style (opening brace on its own line)
+BreakBeforeBraces: Allman
+
+# Constructor initializers: comma-first, 4-space indent
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+
+# Pointers/references attach to the type
+PointerAlignment: Left
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+SpacesInParentheses: false
+SpacesInAngles: Never
+SpacesInSquareBrackets: false
+
+# Short constructs — keep them expanded for readability
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Includes — preserve manual grouping order
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# Misc
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false

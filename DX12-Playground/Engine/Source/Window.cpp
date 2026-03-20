@@ -47,8 +47,8 @@ void Window::Show()
 }
 
 /**
-* Hide the window.
-*/
+ * Hide the window.
+ */
 void Window::Hide()
 {
     ::ShowWindow(m_hWnd, SW_HIDE);
@@ -107,13 +107,14 @@ void Window::SetFullscreen(bool fullscreen)
 
         if (m_Fullscreen) // Switching to fullscreen.
         {
-            // Store the current window dimensions so they can be restored 
+            // Store the current window dimensions so they can be restored
             // when switching out of fullscreen state.
             ::GetWindowRect(m_hWnd, &m_WindowRect);
 
             // Set the window style to a borderless window so the client area fills
             // the entire screen.
-            UINT windowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+            UINT windowStyle =
+                WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 
             ::SetWindowLongW(m_hWnd, GWL_STYLE, windowStyle);
 
@@ -125,12 +126,9 @@ void Window::SetFullscreen(bool fullscreen)
             monitorInfo.cbSize = sizeof(MONITORINFOEX);
             ::GetMonitorInfo(hMonitor, &monitorInfo);
 
-            ::SetWindowPos(m_hWnd, HWND_TOPMOST,
-                monitorInfo.rcMonitor.left,
-                monitorInfo.rcMonitor.top,
-                monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
-                monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
-                SWP_FRAMECHANGED | SWP_NOACTIVATE);
+            ::SetWindowPos(m_hWnd, HWND_TOPMOST, monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
+                           monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+                           monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
             ::ShowWindow(m_hWnd, SW_MAXIMIZE);
         }
@@ -139,12 +137,9 @@ void Window::SetFullscreen(bool fullscreen)
             // Restore all the window decorators.
             ::SetWindowLong(m_hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-            ::SetWindowPos(m_hWnd, HWND_NOTOPMOST,
-                m_WindowRect.left,
-                m_WindowRect.top,
-                m_WindowRect.right - m_WindowRect.left,
-                m_WindowRect.bottom - m_WindowRect.top,
-                SWP_FRAMECHANGED | SWP_NOACTIVATE);
+            ::SetWindowPos(m_hWnd, HWND_NOTOPMOST, m_WindowRect.left, m_WindowRect.top,
+                           m_WindowRect.right - m_WindowRect.left, m_WindowRect.bottom - m_WindowRect.top,
+                           SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
             ::ShowWindow(m_hWnd, SW_NORMAL);
         }
@@ -155,7 +150,6 @@ void Window::ToggleFullscreen()
 {
     SetFullscreen(!m_Fullscreen);
 }
-
 
 void Window::RegisterCallbacks(std::shared_ptr<Game> pGame)
 {
@@ -253,8 +247,8 @@ void Window::OnResize(ResizeEventArgs& e)
 
         DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
         ThrowIfFailed(m_dxgiSwapChain->GetDesc(&swapChainDesc));
-        ThrowIfFailed(m_dxgiSwapChain->ResizeBuffers(BufferCount, m_ClientWidth,
-            m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+        ThrowIfFailed(m_dxgiSwapChain->ResizeBuffers(BufferCount, m_ClientWidth, m_ClientHeight,
+                                                     swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
 
         m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
@@ -285,7 +279,7 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
     swapChainDesc.Height = m_ClientHeight;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.Stereo = FALSE;
-    swapChainDesc.SampleDesc = { 1, 0 };
+    swapChainDesc.SampleDesc = {1, 0};
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount = BufferCount;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -296,13 +290,8 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
     ID3D12CommandQueue* pCommandQueue = app.GetCommandQueue()->GetD3D12CommandQueue().Get();
 
     ComPtr<IDXGISwapChain1> swapChain1;
-    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
-        pCommandQueue,
-        m_hWnd,
-        &swapChainDesc,
-        nullptr,
-        nullptr,
-        &swapChain1));
+    ThrowIfFailed(
+        dxgiFactory4->CreateSwapChainForHwnd(pCommandQueue, m_hWnd, &swapChainDesc, nullptr, nullptr, &swapChain1));
 
     // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
     // will be handled manually.
@@ -337,7 +326,7 @@ void Window::UpdateRenderTargetViews()
 D3D12_CPU_DESCRIPTOR_HANDLE Window::GetCurrentRenderTargetView() const
 {
     return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_d3d12RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-        m_CurrentBackBufferIndex, m_RTVDescriptorSize);
+                                         m_CurrentBackBufferIndex, m_RTVDescriptorSize);
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Window::GetCurrentBackBuffer() const

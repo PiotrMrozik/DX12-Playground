@@ -1,6 +1,6 @@
 /**
-* @brief A window for our application.
-*/
+ * @brief A window for our application.
+ */
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
@@ -23,14 +23,14 @@ public:
     static const UINT BufferCount = 3;
 
     /**
-    * Get a handle to this window's instance.
-    * @returns The handle to the window instance or nullptr if this is not a valid window.
-    */
+     * Get a handle to this window's instance.
+     * @returns The handle to the window instance or nullptr if this is not a valid window.
+     */
     HWND GetWindowHandle() const;
 
     /**
-    * Destroy this window.
-    */
+     * Destroy this window.
+     */
     void Destroy();
 
     const std::wstring& GetWindowName() const;
@@ -39,15 +39,15 @@ public:
     int GetClientHeight() const;
 
     /**
-    * Should this window be rendered with vertical refresh synchronization.
-    */
+     * Should this window be rendered with vertical refresh synchronization.
+     */
     bool IsVSync() const;
     void SetVSync(bool vSync);
     void ToggleVSync();
 
     /**
-    * Is this a windowed window or full-screen?
-    */
+     * Is this a windowed window or full-screen?
+     */
     bool IsFullScreen() const;
 
     // Set the fullscreen state of the window.
@@ -84,7 +84,6 @@ public:
      * Get the back buffer resource for the current back buffer.
      */
     Microsoft::WRL::ComPtr<ID3D12Resource> GetCurrentBackBuffer() const;
-
 
 protected:
     // The Window procedure needs to call protected methods of this class.
@@ -159,5 +158,4 @@ private:
 
     RECT m_WindowRect;
     bool m_IsTearingSupported;
-
 };
