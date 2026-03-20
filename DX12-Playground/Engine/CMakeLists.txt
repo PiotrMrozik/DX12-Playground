@@ -11,6 +11,10 @@ set( SOURCE_FILES
     Source/Game.cpp
     Source/HighResolutionClock.cpp
     Source/Window.cpp
+    Source/ECS/Entity/EntityManager.cpp
+    Source/ECS/Component/ComponentManager.cpp
+    Source/ECS/System/SystemManager.cpp
+    Source/ECS/World.cpp
 )
 
 add_library( Engine STATIC
