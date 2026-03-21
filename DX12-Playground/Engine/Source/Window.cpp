@@ -200,6 +200,17 @@ void Window::OnKeyReleased(KeyEventArgs& e)
 
 void Window::OnMouseMoved(MouseMotionEventArgs& e)
 {
+    e.RelX = e.X - m_PreviousMouseX;
+    e.RelY = e.Y - m_PreviousMouseY;
+
+    m_PreviousMouseX = e.X;
+    m_PreviousMouseY = e.Y;
+
+    if (auto pGame = m_pGame.lock())
+    {
+        pGame->OnMouseMoved(e);
+    }
+
     if (auto pGame = m_pGame.lock())
     {
         pGame->OnMouseMoved(e);

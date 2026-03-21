@@ -11,6 +11,7 @@
 
 #include <Events.h>
 #include <Window.h>
+#include <ECS/World.h>
 
 class CommandQueue;
 
@@ -114,6 +115,9 @@ protected:
     bool m_ContentLoaded = false;
 
     std::shared_ptr<Window> m_pWindow;
+
+    // ECS world — owns all entities, components, and systems for this game.
+    World m_World;
 
 private:
     std::wstring m_Name;

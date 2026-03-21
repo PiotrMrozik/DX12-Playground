@@ -13,6 +13,11 @@ using namespace Microsoft::WRL;
 
 #include <Mesh/Vertex.h>
 
+#include <ECS/Systems/TransformSystem.h>
+#include <ECS/Systems/RenderableSystem.h>
+#include <ECS/Systems/FrameContext.h>
+#include <ECS/Prefabs/MeshObjectPrefab.h>
+
 #include <algorithm>
 #if defined(min)
 #undef min
@@ -95,8 +100,9 @@ bool Sample::LoadContent()
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
-    CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-    rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+    rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: World
+    rootParameters[1].InitAsConstants(sizeof(XMMATRIX) / 4, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b1: VP
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
@@ -141,6 +147,47 @@ bool Sample::LoadContent()
     auto fenceValue = commandQueue->ExecuteCommandList(commandList);
     commandQueue->WaitForFenceValue(fenceValue);
 
+    // --- ECS: register components ---
+    m_World.RegisterComponent<TransformComponent>();
+    m_World.RegisterComponent<TagComponent>();
+    m_World.RegisterComponent<MeshComponent>();
+
+    // --- ECS: register systems ---
+    m_TransformSystem = m_World.RegisterSystem<TransformSystem>();
+    {
+        EntitySignature sig;
+        sig.set(m_World.GetComponentType<TransformComponent>());
+        m_World.SetSystemSignature<TransformSystem>(sig);
+    }
+
+    m_RenderableSystem = m_World.RegisterSystem<RenderableSystem>();
+    {
+        EntitySignature sig;
+        sig.set(m_World.GetComponentType<TransformComponent>());
+        sig.set(m_World.GetComponentType<MeshComponent>());
+        m_World.SetSystemSignature<RenderableSystem>(sig);
+    }
+
+    // --- ECS: create cube entities ---
+    for (int i = 0; i < 100; ++i)
+    {
+        float px    = static_cast<float>(rand() % 10 - 5);
+        float py    = static_cast<float>(rand() % 10 - 5);
+        float pz    = static_cast<float>(rand() % 10 - 5);
+        float scale = static_cast<float>(rand() % 2) + 1.1f;
+
+        m_EntityList[i] = MeshObjectPrefab{
+            "Cube",
+            TransformComponent{ {px, py, pz}, {}, {scale, scale, scale} },
+            MeshComponent(0)
+        }.Spawn(m_World);
+    }
+
+    // --- Camera ---
+    m_World.camera.target = { 0.f, 0.f, 0.f };
+    m_World.camera.radius = 10.f;
+    m_World.camera.fovY   = XMConvertToRadians(m_FoV);
+
     m_ContentLoaded = true;
 
     ResizeMSAAResources(GetClientWidth(), GetClientHeight());
@@ -157,20 +204,26 @@ void Sample::OnUpdate(UpdateEventArgs& e)
 {
     Game::OnUpdate(e); // FPS counter
 
-    // Rotate the cube.
-    float angle = static_cast<float>(e.TotalTime * 90.0);
-    const XMVECTOR rotationAxis = XMVectorSet(-0.5f, 1, 0, 0);
-    m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+    for (int i = 0; i < 100; ++i)
+    {
+        if (m_EntityList[i] != INVALID_ENTITY)
+        {
+            auto& tc = m_World.GetComponent<TransformComponent>(m_EntityList[i]);
+            tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
+            tc.rotation.x += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 45.0 ));
+            tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
+        }
+    }
 
-    // Fixed camera looking at origin from -Z.
-    const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
-    const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
-    const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-    m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+    // Sync FoV (may have changed via mouse wheel).
+    m_World.camera.fovY = XMConvertToRadians(m_FoV);
 
-    // Perspective projection (m_FoV is in Game).
+    // Run ECS systems.
     float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
-    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+    m_FrameCtx.Reset();
+    m_FrameCtx.viewProj = m_World.camera.GetViewProjMatrix(aspectRatio);
+    m_TransformSystem->Update(m_World);
+    m_RenderableSystem->Update(m_World, m_FrameCtx);
 }
 
 void Sample::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
@@ -219,11 +272,13 @@ void Sample::OnRender(RenderEventArgs& e)
 
     commandList->OMSetRenderTargets(1, &msaaRtv, FALSE, &dsv);
 
-    XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-    mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-    commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+    commandList->SetGraphicsRoot32BitConstants(1, sizeof(XMMATRIX) / 4, &m_FrameCtx.viewProj, 0);
 
-    commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+    for (const auto& entry : m_FrameCtx.renderList)
+    {
+        commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &entry.worldMatrix, 0);
+        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+    }
 
     // Phase 3: Transition both resources for resolve
     TransitionResource(commandList, m_MSAARenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET,

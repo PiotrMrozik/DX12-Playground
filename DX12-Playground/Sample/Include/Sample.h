@@ -1,8 +1,11 @@
 #pragma once
 
-#include <Game.h>
+#include <memory>
 
-#include <DirectXMath.h>
+#include <Game.h>
+#include <ECS/Systems/TransformSystem.h>
+#include <ECS/Systems/RenderableSystem.h>
+#include <ECS/Systems/FrameContext.h>
 
 class Sample : public Game
 {
@@ -35,8 +38,13 @@ private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
 
-    // Matrices
-    DirectX::XMMATRIX m_ModelMatrix;
-    DirectX::XMMATRIX m_ViewMatrix;
-    DirectX::XMMATRIX m_ProjectionMatrix;
+    // ECS systems
+    std::shared_ptr<TransformSystem>  m_TransformSystem;
+    std::shared_ptr<RenderableSystem> m_RenderableSystem;
+
+    FrameContext m_FrameCtx;
+
+    // Scene entities
+    std::vector<Entity> m_EntityList = std::vector<Entity>(100, INVALID_ENTITY);
+
 };

@@ -5,6 +5,7 @@
 #include <Game.h>
 #include <KeyCodes.h>
 #include <Window.h>
+#include <Camera/OrbitCamera.h>
 
 Game::Game(const std::wstring& name, int width, int height, bool vSync)
     : m_Name(name)
@@ -126,6 +127,20 @@ void Game::OnKeyReleased(KeyEventArgs& e)
 }
 void Game::OnMouseMoved(MouseMotionEventArgs& e)
 {
+    if (e.LeftButton)
+    {
+        m_World.camera.yaw += e.RelX * m_World.camera.rotationSensitivity;
+        m_World.camera.pitch -= e.RelY * m_World.camera.rotationSensitivity;
+        m_World.camera.pitch  = std::clamp(m_World.camera.pitch,
+                                           OrbitCamera::MinPitch,
+                                           OrbitCamera::MaxPitch);
+    }
+
+    if (e.RightButton)
+    {
+        m_World.camera.Pan(static_cast<float>(e.RelX * m_World.camera.panSensitivity),
+                           static_cast<float>(e.RelY * m_World.camera.panSensitivity));
+    }
 }
 void Game::OnMouseButtonPressed(MouseButtonEventArgs& e)
 {
@@ -136,12 +151,8 @@ void Game::OnMouseButtonReleased(MouseButtonEventArgs& e)
 
 void Game::OnMouseWheel(MouseWheelEventArgs& e)
 {
-    m_FoV -= e.WheelDelta;
-    m_FoV = std::clamp(m_FoV, 12.0f, 90.0f);
-
-    char buffer[256];
-    sprintf_s(buffer, "FoV: %f\n", m_FoV);
-    OutputDebugStringA(buffer);
+    m_World.camera.radius -= e.WheelDelta * m_World.camera.zoomSpeed;
+    m_World.camera.radius  = std::max(m_World.camera.radius, 0.5f);
 }
 
 void Game::OnResize(ResizeEventArgs& e)
