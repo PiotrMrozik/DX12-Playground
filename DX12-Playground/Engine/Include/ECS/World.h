@@ -57,6 +57,13 @@ public:
         return componentManager.GetComponentType<T>();
     }
 
+    template <typename T>
+    bool HasComponent(Entity entity)
+    {
+        ComponentType type = componentManager.GetComponentType<T>();
+        return entityManager.GetSignature(entity).test(type);
+    }
+
     // --- System registration ---
 
     template <typename T>
