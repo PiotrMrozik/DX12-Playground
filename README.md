@@ -6,7 +6,7 @@
 ![DirectX 12](https://img.shields.io/badge/DirectX-12-0078D4?logo=windows)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2011-0078D4?logo=windows)
 ![Build](https://img.shields.io/badge/Build-CMake%203.20%2B-brightgreen?logo=cmake)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
 ---
 
@@ -240,4 +240,4 @@ DX12-Playground/              ← repo root
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).
