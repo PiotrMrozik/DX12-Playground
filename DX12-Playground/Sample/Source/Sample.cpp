@@ -184,9 +184,9 @@ bool Sample::LoadContent()
     }
 
     // --- Camera ---
-    m_World.camera.target = { 0.f, 0.f, 0.f };
-    m_World.camera.radius = 10.f;
-    m_World.camera.fovY   = XMConvertToRadians(m_FoV);
+    m_Camera.target = { 0.f, 0.f, 0.f };
+    m_Camera.radius = 10.f;
+    m_Camera.fovY   = XMConvertToRadians(m_FoV);
 
     m_ContentLoaded = true;
 
@@ -216,12 +216,12 @@ void Sample::OnUpdate(UpdateEventArgs& e)
     }
 
     // Sync FoV (may have changed via mouse wheel).
-    m_World.camera.fovY = XMConvertToRadians(m_FoV);
+    m_Camera.fovY = XMConvertToRadians(m_FoV);
 
     // Run ECS systems.
     float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
     m_FrameCtx.Reset();
-    m_FrameCtx.viewProj = m_World.camera.GetViewProjMatrix(aspectRatio);
+    m_FrameCtx.viewProj = m_Camera.GetViewProjMatrix(aspectRatio);
     m_TransformSystem->Update(m_World);
     m_RenderableSystem->Update(m_World, m_FrameCtx);
 }

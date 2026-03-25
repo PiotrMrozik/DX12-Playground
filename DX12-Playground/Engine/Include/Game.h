@@ -12,6 +12,7 @@
 #include <Events.h>
 #include <Window.h>
 #include <ECS/World.h>
+#include <Camera/OrbitCamera.h>
 
 class CommandQueue;
 
@@ -118,6 +119,9 @@ protected:
 
     // ECS world — owns all entities, components, and systems for this game.
     World m_World;
+
+    // Orbit camera — owned by Game, driven by mouse input handlers.
+    OrbitCamera m_Camera{};
 
 private:
     std::wstring m_Name;

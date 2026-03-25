@@ -11,18 +11,16 @@ class World
 {
 public:
     Entity CreateEntity();
-    void   DestroyEntity(Entity entity);
+    void DestroyEntity(Entity entity);
 
     // --- Component registration & access ---
 
-    template <typename T>
-    void RegisterComponent()
+    template <typename T> void RegisterComponent()
     {
         componentManager.RegisterComponent<T>();
     }
 
-    template <typename T>
-    void AddComponent(Entity entity, T component)
+    template <typename T> void AddComponent(Entity entity, T component)
     {
         componentManager.AddComponent<T>(entity, std::move(component));
 
@@ -33,8 +31,7 @@ public:
         systemManager.EntitySignatureChanged(entity, sig);
     }
 
-    template <typename T>
-    void RemoveComponent(Entity entity)
+    template <typename T> void RemoveComponent(Entity entity)
     {
         componentManager.RemoveComponent<T>(entity);
 
@@ -45,20 +42,17 @@ public:
         systemManager.EntitySignatureChanged(entity, sig);
     }
 
-    template <typename T>
-    T& GetComponent(Entity entity)
+    template <typename T> T& GetComponent(Entity entity)
     {
         return componentManager.GetComponent<T>(entity);
     }
 
-    template <typename T>
-    ComponentType GetComponentType()
+    template <typename T> ComponentType GetComponentType()
     {
         return componentManager.GetComponentType<T>();
     }
 
-    template <typename T>
-    bool HasComponent(Entity entity)
+    template <typename T> bool HasComponent(Entity entity)
     {
         ComponentType type = componentManager.GetComponentType<T>();
         return entityManager.GetSignature(entity).test(type);
@@ -66,14 +60,12 @@ public:
 
     // --- System registration ---
 
-    template <typename T>
-    std::shared_ptr<T> RegisterSystem()
+    template <typename T> std::shared_ptr<T> RegisterSystem()
     {
         return systemManager.RegisterSystem<T>();
     }
 
-    template <typename T>
-    void SetSystemSignature(EntitySignature signature)
+    template <typename T> void SetSystemSignature(EntitySignature signature)
     {
         systemManager.SetSignature<T>(signature);
     }

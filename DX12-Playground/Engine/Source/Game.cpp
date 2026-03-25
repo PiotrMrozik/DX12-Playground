@@ -129,17 +129,17 @@ void Game::OnMouseMoved(MouseMotionEventArgs& e)
 {
     if (e.LeftButton)
     {
-        m_World.camera.yaw += e.RelX * m_World.camera.rotationSensitivity;
-        m_World.camera.pitch -= e.RelY * m_World.camera.rotationSensitivity;
-        m_World.camera.pitch  = std::clamp(m_World.camera.pitch,
-                                           OrbitCamera::MinPitch,
-                                           OrbitCamera::MaxPitch);
+        m_Camera.yaw += e.RelX * m_Camera.rotationSensitivity;
+        m_Camera.pitch -= e.RelY * m_Camera.rotationSensitivity;
+        m_Camera.pitch  = std::clamp(m_Camera.pitch,
+                                     OrbitCamera::MinPitch,
+                                     OrbitCamera::MaxPitch);
     }
 
     if (e.RightButton)
     {
-        m_World.camera.Pan(static_cast<float>(e.RelX * m_World.camera.panSensitivity),
-                           static_cast<float>(e.RelY * m_World.camera.panSensitivity));
+        m_Camera.Pan(static_cast<float>(e.RelX * m_Camera.panSensitivity),
+                     static_cast<float>(e.RelY * m_Camera.panSensitivity));
     }
 }
 void Game::OnMouseButtonPressed(MouseButtonEventArgs& e)
@@ -148,13 +148,11 @@ void Game::OnMouseButtonPressed(MouseButtonEventArgs& e)
 void Game::OnMouseButtonReleased(MouseButtonEventArgs& e)
 {
 }
-
 void Game::OnMouseWheel(MouseWheelEventArgs& e)
 {
-    m_World.camera.radius -= e.WheelDelta * m_World.camera.zoomSpeed;
-    m_World.camera.radius  = std::max(m_World.camera.radius, 0.5f);
+    m_Camera.radius -= e.WheelDelta * m_Camera.zoomSpeed;
+    m_Camera.radius  = std::max(m_Camera.radius, 0.5f);
 }
-
 void Game::OnResize(ResizeEventArgs& e)
 {
     m_Width = e.Width;
