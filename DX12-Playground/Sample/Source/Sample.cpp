@@ -12,6 +12,8 @@ using namespace Microsoft::WRL;
 #include <d3dcompiler.h>
 
 #include <Mesh/Vertex.h>
+#include <Mesh/Primitives.h>
+#include <Mesh/MeshRegistry.h>
 
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
@@ -28,20 +30,6 @@ using namespace Microsoft::WRL;
 
 using namespace DirectX;
 
-static VertexNormalColor g_Vertices[8] = {
-    {XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(-0.5774f, -0.5774f, -0.5774f)}, // 0
-    {XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(-0.5774f, 0.5774f, -0.5774f)},   // 1
-    {XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT3(0.5774f, 0.5774f, -0.5774f)},     // 2
-    {XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT3(0.5774f, -0.5774f, -0.5774f)},   // 3
-    {XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(-0.5774f, -0.5774f, 0.5774f)},   // 4
-    {XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f), XMFLOAT3(-0.5774f, 0.5774f, 0.5774f)},     // 5
-    {XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.5774f, 0.5774f, 0.5774f)},       // 6
-    {XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f), XMFLOAT3(0.5774f, -0.5774f, 0.5774f)}      // 7
-};
-
-static WORD g_Indicies[36] = {0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 4, 5, 1, 4, 1, 0,
-                              3, 2, 6, 3, 6, 7, 1, 5, 6, 1, 6, 2, 4, 0, 3, 4, 3, 7};
-
 Sample::Sample(const std::wstring& name, int width, int height, bool vSync)
     : Game(name, width, height, vSync)
 {
@@ -53,23 +41,9 @@ bool Sample::LoadContent()
     auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
     auto commandList = commandQueue->GetCommandList();
 
-    // Upload vertex buffer data.
-    ComPtr<ID3D12Resource> intermediateVertexBuffer;
-    UpdateBufferResource(commandList, &m_VertexBuffer, &intermediateVertexBuffer, _countof(g_Vertices),
-                         sizeof(VertexNormalColor), g_Vertices);
-
-    m_VertexBufferView.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress();
-    m_VertexBufferView.SizeInBytes = sizeof(g_Vertices);
-    m_VertexBufferView.StrideInBytes = sizeof(VertexNormalColor);
-
-    // Upload index buffer data.
-    ComPtr<ID3D12Resource> intermediateIndexBuffer;
-    UpdateBufferResource(commandList, &m_IndexBuffer, &intermediateIndexBuffer, _countof(g_Indicies), sizeof(WORD),
-                         g_Indicies);
-
-    m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
-    m_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
-    m_IndexBufferView.SizeInBytes = sizeof(g_Indicies);
+    // Upload primitive meshes via the registry.
+    std::vector<ComPtr<ID3D12Resource>> intermediates;
+    uint32_t cubeIndex = m_MeshRegistry.Add(Primitives::CreateCube(1.0f), device, commandList, intermediates);
 
     // Load shaders.
     ComPtr<ID3DBlob> vertexShaderBlob;
@@ -78,11 +52,9 @@ bool Sample::LoadContent()
     ComPtr<ID3DBlob> pixelShaderBlob;
     ThrowIfFailed(D3DReadFileToBlob(L"PixelShader.cso", &pixelShaderBlob));
 
-    // Vertex input layout.
+    // Vertex input layout — matches VertexNormal (Position + Normal).
     D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
-         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -174,12 +146,12 @@ bool Sample::LoadContent()
         float px    = static_cast<float>(rand() % 10 - 5);
         float py    = static_cast<float>(rand() % 10 - 5);
         float pz    = static_cast<float>(rand() % 10 - 5);
-        float scale = static_cast<float>(rand() % 2) + 1.1f;
+        float scale = static_cast<float>(rand() % 1) + 0.5f;
 
-        m_EntityList[i] = MeshObjectPrefab{
+        MeshObjectPrefab{
             "Cube",
             TransformComponent{ {px, py, pz}, {}, {scale, scale, scale} },
-            MeshComponent(0)
+            MeshComponent(cubeIndex)
         }.Spawn(m_World);
     }
 
@@ -204,15 +176,12 @@ void Sample::OnUpdate(UpdateEventArgs& e)
 {
     Game::OnUpdate(e); // FPS counter
 
-    for (int i = 0; i < 100; ++i)
+    for (Entity entity : m_TransformSystem->entities)
     {
-        if (m_EntityList[i] != INVALID_ENTITY)
-        {
-            auto& tc = m_World.GetComponent<TransformComponent>(m_EntityList[i]);
-            tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
-            tc.rotation.x += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 45.0 ));
-            tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
-        }
+        auto& tc = m_World.GetComponent<TransformComponent>(entity);
+        tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
+        tc.rotation.x += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 45.0 ));
+        tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
     }
 
     // Sync FoV (may have changed via mouse wheel).
@@ -263,10 +232,6 @@ void Sample::OnRender(RenderEventArgs& e)
     commandList->SetPipelineState(m_PipelineState.Get());
     commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
-    commandList->IASetIndexBuffer(&m_IndexBufferView);
-
     commandList->RSSetViewports(1, &m_Viewport);
     commandList->RSSetScissorRects(1, &m_ScissorRect);
 
@@ -276,8 +241,14 @@ void Sample::OnRender(RenderEventArgs& e)
 
     for (const auto& entry : m_FrameCtx.renderList)
     {
+        const Mesh& mesh = m_MeshRegistry.Get(entry.meshIndex);
+
+        commandList->IASetPrimitiveTopology(mesh.topology);
+        commandList->IASetVertexBuffers(0, 1, &mesh.vbView);
+        commandList->IASetIndexBuffer(&mesh.ibView);
+
         commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &entry.worldMatrix, 0);
-        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+        commandList->DrawIndexedInstanced(mesh.indexCount, 1, 0, 0, 0);
     }
 
     // Phase 3: Transition both resources for resolve

@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <Game.h>
+#include <Mesh/MeshRegistry.h>
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
 #include <ECS/Systems/FrameContext.h>
@@ -28,11 +29,7 @@ private:
                     FLOAT depth = 1.0f);
 
     // Geometry
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
-    D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
+    MeshRegistry m_MeshRegistry;
 
     // Pipeline
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
@@ -43,8 +40,5 @@ private:
     std::shared_ptr<RenderableSystem> m_RenderableSystem;
 
     FrameContext m_FrameCtx;
-
-    // Scene entities
-    std::vector<Entity> m_EntityList = std::vector<Entity>(100, INVALID_ENTITY);
 
 };
