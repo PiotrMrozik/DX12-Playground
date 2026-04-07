@@ -17,6 +17,8 @@ set( SOURCE_FILES
     Source/ECS/World.cpp
     Source/ECS/Prefabs/MeshObjectPrefab.cpp
     Source/Camera/OrbitCamera.cpp
+    Source/Mesh/MeshRegistry.cpp
+    Source/Mesh/Primitives.cpp
 )
 
 add_library( Engine STATIC
