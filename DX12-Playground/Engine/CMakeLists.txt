@@ -1,5 +1,6 @@
-# vcpkg provides directx-headers (find_package works after toolchain is loaded)
+# vcpkg provides directx-headers and imgui (find_package works after toolchain is loaded)
 find_package(directx-headers CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
 file( GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
     Include/*.h
@@ -36,4 +37,5 @@ target_link_libraries( Engine
     PUBLIC dxgi.lib
     PUBLIC dxguid.lib
     PUBLIC Microsoft::DirectX-Headers
+    PUBLIC imgui::imgui
 )

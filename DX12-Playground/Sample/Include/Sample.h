@@ -11,7 +11,7 @@
 class Sample : public Game
 {
 public:
-    Sample(const std::wstring& name, int width, int height, bool vSync = false);
+    Sample(const std::wstring& name, int width, int height, bool vSync = true);
 
     virtual bool LoadContent() override;
     virtual void UnloadContent() override;
@@ -19,6 +19,7 @@ public:
 protected:
     virtual void OnUpdate(UpdateEventArgs& e) override;
     virtual void OnRender(RenderEventArgs& e) override;
+    virtual void OnImGui() override;
 
 private:
     // Clear helpers (thin wrappers kept in Sample)

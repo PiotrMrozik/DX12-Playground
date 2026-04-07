@@ -172,6 +172,18 @@ void Sample::UnloadContent()
     m_ContentLoaded = false;
 }
 
+void Sample::OnImGui()
+{
+    ImGui::ShowDemoWindow();
+    ImGui::Begin("Sample");
+    ImGui::Text("%.1f FPS  (%.2f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+    ImGui::Separator();
+    ImGui::Text("Camera");
+    ImGui::SliderFloat("Radius",    &m_Camera.radius, 1.0f, 50.0f);
+    ImGui::SliderFloat("FoV",       &m_FoV,           12.0f, 90.0f);
+    ImGui::End();
+}
+
 void Sample::OnUpdate(UpdateEventArgs& e)
 {
     Game::OnUpdate(e); // FPS counter
@@ -260,8 +272,16 @@ void Sample::OnRender(RenderEventArgs& e)
     // Phase 4: Resolve MSAA -> swap chain back buffer
     commandList->ResolveSubresource(backBuffer.Get(), 0, m_MSAARenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-    // Phase 5: back buffer RESOLVE_DEST -> PRESENT, then present
-    TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT);
+    // Phase 5: back buffer RESOLVE_DEST -> RENDER_TARGET for ImGui overlay
+    TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RESOLVE_DEST,
+                       D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    auto backBufferRtv = m_pWindow->GetCurrentRenderTargetView();
+    commandList->OMSetRenderTargets(1, &backBufferRtv, FALSE, nullptr);
+    RenderImGui(commandList);
+
+    // Phase 6: back buffer RENDER_TARGET -> PRESENT, then present
+    TransitionResource(commandList, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
     Present(commandQueue, commandList);
 }

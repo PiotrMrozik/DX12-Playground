@@ -7,6 +7,41 @@
 #include <Window.h>
 #include <Camera/OrbitCamera.h>
 
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+
+// ---------------------------------------------------------------------------
+// ImGuiSrvDescAllocator
+// ---------------------------------------------------------------------------
+
+void Game::ImGuiSrvDescAllocator::Create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC desc = heap->GetDesc();
+    HeapStartCpu = heap->GetCPUDescriptorHandleForHeapStart();
+    HeapStartGpu = heap->GetGPUDescriptorHandleForHeapStart();
+    Increment    = device->GetDescriptorHandleIncrementSize(desc.Type);
+    FreeIndices.reserve(static_cast<int>(desc.NumDescriptors));
+    for (int n = static_cast<int>(desc.NumDescriptors); n > 0; --n)
+        FreeIndices.push_back(n - 1);
+}
+
+void Game::ImGuiSrvDescAllocator::Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu)
+{
+    assert(!FreeIndices.empty() && "ImGui SRV descriptor heap exhausted — increase heap size.");
+    int idx = FreeIndices.back();
+    FreeIndices.pop_back();
+    outCpu->ptr = HeapStartCpu.ptr + static_cast<SIZE_T>(idx) * Increment;
+    outGpu->ptr = HeapStartGpu.ptr + static_cast<UINT64>(idx) * Increment;
+}
+
+void Game::ImGuiSrvDescAllocator::Free(D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/)
+{
+    int idx = static_cast<int>((cpu.ptr - HeapStartCpu.ptr) / Increment);
+    FreeIndices.push_back(idx);
+}
+
+// ---------------------------------------------------------------------------
+
 Game::Game(const std::wstring& name, int width, int height, bool vSync)
     : m_Name(name)
     , m_Width(width)
@@ -14,7 +49,7 @@ Game::Game(const std::wstring& name, int width, int height, bool vSync)
     , m_vSync(vSync)
     , m_Viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)))
     , m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
-    , m_FoV(45.0f)
+    , m_FoV(60.0f)
     , m_ContentLoaded(false)
 {
 }
@@ -64,11 +99,46 @@ bool Game::Initialize()
     msaaRtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     ThrowIfFailed(device->CreateDescriptorHeap(&msaaRtvHeapDesc, IID_PPV_ARGS(&m_MSAARTVHeap)));
 
+    // --- ImGui ---
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    // Shader-visible SRV heap: enough descriptors for ImGui's dynamic atlas.
+    D3D12_DESCRIPTOR_HEAP_DESC imguiSrvDesc = {};
+    imguiSrvDesc.NumDescriptors = 64;
+    imguiSrvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    imguiSrvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    ThrowIfFailed(device->CreateDescriptorHeap(&imguiSrvDesc, IID_PPV_ARGS(&m_ImGuiSrvHeap)));
+    m_ImGuiSrvDescAllocator.Create(device.Get(), m_ImGuiSrvHeap.Get());
+
+    ImGui_ImplWin32_Init(m_pWindow->GetWindowHandle());
+
+    ImGui_ImplDX12_InitInfo initInfo = {};
+    initInfo.Device           = device.Get();
+    initInfo.CommandQueue     = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->GetD3D12CommandQueue().Get();
+    initInfo.NumFramesInFlight = Window::BufferCount;
+    initInfo.RTVFormat        = DXGI_FORMAT_R8G8B8A8_UNORM;
+    initInfo.DSVFormat        = DXGI_FORMAT_UNKNOWN;
+    initInfo.SrvDescriptorHeap = m_ImGuiSrvHeap.Get();
+    initInfo.UserData         = this;
+    initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu) {
+        static_cast<Game*>(info->UserData)->m_ImGuiSrvDescAllocator.Alloc(outCpu, outGpu);
+    };
+    initInfo.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu) {
+        static_cast<Game*>(info->UserData)->m_ImGuiSrvDescAllocator.Free(cpu, gpu);
+    };
+    ImGui_ImplDX12_Init(&initInfo);
+
     return true;
 }
 
 void Game::Destroy()
 {
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+
     Application::Get().DestroyWindow(m_pWindow);
     m_pWindow.reset();
 }
@@ -79,27 +149,22 @@ void Game::Destroy()
 
 void Game::OnUpdate(UpdateEventArgs& e)
 {
-    static uint64_t frameCount = 0;
-    static double totalTime = 0.0;
-
-    totalTime += e.ElapsedTime;
-    frameCount++;
-
-    if (totalTime > 1.0)
-    {
-        double fps = frameCount / totalTime;
-
-        char buffer[512];
-        sprintf_s(buffer, "FPS: %f\n", fps);
-        OutputDebugStringA(buffer);
-
-        frameCount = 0;
-        totalTime = 0.0;
-    }
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    OnImGui();
 }
 
 void Game::OnRender(RenderEventArgs& e)
 {
+}
+
+void Game::RenderImGui(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList)
+{
+    ImGui::Render();
+    ID3D12DescriptorHeap* heaps[] = {m_ImGuiSrvHeap.Get()};
+    commandList->SetDescriptorHeaps(1, heaps);
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
 }
 
 void Game::OnKeyPressed(KeyEventArgs& e)

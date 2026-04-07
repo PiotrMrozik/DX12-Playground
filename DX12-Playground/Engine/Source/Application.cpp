@@ -6,6 +6,9 @@
 #include <Window.h>
 #include <Events.h>
 
+#include <imgui_impl_win32.h>
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"DX12RenderWindowClass";
 
 using WindowPtr = std::shared_ptr<Window>;
@@ -406,6 +409,9 @@ MouseButtonEventArgs::MouseButton DecodeMouseButton(UINT messageID)
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
+        return true;
+
     WindowPtr pWindow;
     {
         WindowMap::iterator iter = gs_Windows.find(hwnd);

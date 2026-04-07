@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <directx/d3d12.h>
 #include <wrl.h>
@@ -13,6 +14,8 @@
 #include <Window.h>
 #include <ECS/World.h>
 #include <Camera/OrbitCamera.h>
+
+#include <imgui.h>
 
 class CommandQueue;
 
@@ -63,6 +66,15 @@ protected:
     // Updates dimensions, viewport, scissor rect, and MSAA resources
     virtual void OnResize(ResizeEventArgs& e);
     virtual void OnWindowDestroy();
+
+    // Called once per frame inside OnUpdate, after ImGui::NewFrame().
+    // Override in subclasses to add ImGui widgets.
+    virtual void OnImGui() {}
+
+    // Calls ImGui::Render() and submits draw data to the command list.
+    // Call from OnRender after transitioning the back buffer to RENDER_TARGET
+    // and binding it with OMSetRenderTargets.
+    void RenderImGui(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList);
 
     // ---------------------------------------------------------------
     // Helpers (A, B, D)
@@ -128,4 +140,21 @@ private:
     int m_Width;
     int m_Height;
     bool m_vSync;
+
+    // Shader-visible SRV heap for ImGui textures.
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImGuiSrvHeap;
+
+    // Simple free-list allocator for ImGui SRV descriptors.
+    struct ImGuiSrvDescAllocator
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE HeapStartCpu = {};
+        D3D12_GPU_DESCRIPTOR_HANDLE HeapStartGpu = {};
+        UINT                        Increment     = 0;
+        std::vector<int>            FreeIndices;
+
+        void Create(ID3D12Device* device, ID3D12DescriptorHeap* heap);
+        void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu);
+        void Free(D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu);
+    };
+    ImGuiSrvDescAllocator m_ImGuiSrvDescAllocator;
 };
