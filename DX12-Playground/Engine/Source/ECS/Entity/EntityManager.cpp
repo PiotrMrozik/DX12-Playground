@@ -18,6 +18,7 @@ Entity EntityManager::CreateEntity()
     const Entity id = availableEntities.front();
     availableEntities.pop();
     ++livingEntityCount;
+    livingEntities.insert(id);
     return id;
 }
 
@@ -27,6 +28,7 @@ void EntityManager::DestroyEntity(Entity entity)
     signatures[entity].reset();
     availableEntities.push(entity);
     --livingEntityCount;
+    livingEntities.erase(entity);
 }
 
 void EntityManager::SetSignature(Entity entity, EntitySignature signature)

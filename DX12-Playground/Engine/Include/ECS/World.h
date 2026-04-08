@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <unordered_set>
 
 #include <ECS/Entity/EntityManager.h>
 #include <ECS/Component/ComponentManager.h>
@@ -12,6 +13,11 @@ class World
 public:
     Entity CreateEntity();
     void DestroyEntity(Entity entity);
+
+    const std::unordered_set<Entity>& GetLivingEntities() const
+    {
+        return entityManager.GetLivingEntities();
+    }
 
     // --- Component registration & access ---
 
@@ -55,6 +61,11 @@ public:
     template <typename T> bool HasComponent(Entity entity)
     {
         ComponentType type = componentManager.GetComponentType<T>();
+        return entityManager.GetSignature(entity).test(type);
+    }
+
+    bool HasComponent(Entity entity, ComponentType type) const
+    {
         return entityManager.GetSignature(entity).test(type);
     }
 
