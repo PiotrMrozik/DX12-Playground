@@ -17,6 +17,7 @@ set( SOURCE_FILES
     Source/ECS/System/SystemManager.cpp
     Source/ECS/World.cpp
     Source/ECS/Prefabs/MeshObjectPrefab.cpp
+    Source/ECS/Prefabs/PointLightPrefab.cpp
     Source/Camera/OrbitCamera.cpp
     Source/Mesh/MeshRegistry.cpp
     Source/Mesh/Primitives.cpp
