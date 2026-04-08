@@ -20,6 +20,10 @@ set( SOURCE_FILES
     Source/Camera/OrbitCamera.cpp
     Source/Mesh/MeshRegistry.cpp
     Source/Mesh/Primitives.cpp
+    Source/UI/ComponentInspectorRegistry.cpp
+    Source/UI/SceneHierarchyPanel.cpp
+    Source/UI/InspectorPanel.cpp
+    Source/UI/UILayer.cpp
 )
 
 add_library( Engine STATIC

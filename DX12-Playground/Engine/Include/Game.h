@@ -14,6 +14,7 @@
 #include <Window.h>
 #include <ECS/World.h>
 #include <Camera/OrbitCamera.h>
+#include <UI/UILayer.h>
 
 #include <imgui.h>
 
@@ -68,8 +69,11 @@ protected:
     virtual void OnWindowDestroy();
 
     // Called once per frame inside OnUpdate, after ImGui::NewFrame().
-    // Override in subclasses to add ImGui widgets.
-    virtual void OnImGui() {}
+    // Draws the UILayer by default; override to add extra ImGui widgets.
+    virtual void OnImGui() { m_UILayer.Draw(); }
+
+protected:
+    UILayer& GetUILayer() { return m_UILayer; }
 
     // Calls ImGui::Render() and submits draw data to the command list.
     // Call from OnRender after transitioning the back buffer to RENDER_TARGET
@@ -134,6 +138,9 @@ protected:
 
     // Orbit camera — owned by Game, driven by mouse input handlers.
     OrbitCamera m_Camera{};
+
+    // UI layer — owns all panels, drives ImGui dockspace.
+    UILayer m_UILayer;
 
 private:
     std::wstring m_Name;
