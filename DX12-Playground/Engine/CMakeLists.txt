@@ -24,6 +24,10 @@ set( SOURCE_FILES
     Source/UI/SceneHierarchyPanel.cpp
     Source/UI/InspectorPanel.cpp
     Source/UI/UILayer.cpp
+    Source/Math/Path.cpp
+    Source/Math/BezierPath.cpp
+    Source/Math/CirclePath.cpp
+    Source/ECS/Systems/PathFollowerSystem.cpp
 )
 
 add_library( Engine STATIC
