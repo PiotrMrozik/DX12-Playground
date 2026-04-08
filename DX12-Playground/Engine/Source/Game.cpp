@@ -102,6 +102,7 @@ bool Game::Initialize()
     // --- ImGui ---
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui::StyleColorsDark();
 
     // Shader-visible SRV heap: enough descriptors for ImGui's dynamic atlas.
