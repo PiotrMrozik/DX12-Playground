@@ -6,6 +6,7 @@
 #include <Mesh/MeshRegistry.h>
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
+#include <ECS/Systems/PathFollowerSystem.h>
 #include <ECS/Systems/FrameContext.h>
 #include <UI/ComponentInspectorRegistry.h>
 
@@ -37,8 +38,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
 
     // ECS systems
-    std::shared_ptr<TransformSystem>  m_TransformSystem;
-    std::shared_ptr<RenderableSystem> m_RenderableSystem;
+    std::shared_ptr<TransformSystem>     m_TransformSystem;
+    std::shared_ptr<RenderableSystem>    m_RenderableSystem;
+    std::shared_ptr<PathFollowerSystem>  m_PathFollowerSystem;
 
     FrameContext m_FrameCtx;
 

@@ -17,8 +17,11 @@ using namespace Microsoft::WRL;
 
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
+#include <ECS/Systems/PathFollowerSystem.h>
 #include <ECS/Systems/FrameContext.h>
 #include <ECS/Prefabs/MeshObjectPrefab.h>
+#include <ECS/Components/PathFollowerComponent.h>
+#include <Math/CirclePath.h>
 
 #include <UI/StatsPanel.h>
 #include <UI/SceneHierarchyPanel.h>
@@ -127,6 +130,7 @@ bool Sample::LoadContent()
     m_World.RegisterComponent<TransformComponent>();
     m_World.RegisterComponent<TagComponent>();
     m_World.RegisterComponent<MeshComponent>();
+    m_World.RegisterComponent<PathFollowerComponent>();
 
     // --- ECS: register systems ---
     m_TransformSystem = m_World.RegisterSystem<TransformSystem>();
@@ -144,20 +148,30 @@ bool Sample::LoadContent()
         m_World.SetSystemSignature<RenderableSystem>(sig);
     }
 
-    // --- ECS: create cube entities ---
-    for (int i = 0; i < 1; ++i)
+    m_PathFollowerSystem = m_World.RegisterSystem<PathFollowerSystem>();
     {
-        float px    = static_cast<float>(rand() % 10 - 5);
-        float py    = static_cast<float>(rand() % 10 - 5);
-        float pz    = static_cast<float>(rand() % 10 - 5);
-        float scale = static_cast<float>(rand() % 1) + 0.5f;
+        EntitySignature sig;
+        sig.set(m_World.GetComponentType<TransformComponent>());
+        sig.set(m_World.GetComponentType<PathFollowerComponent>());
+        m_World.SetSystemSignature<PathFollowerSystem>(sig);
+    }
 
-        MeshObjectPrefab{
-            "Cube",
-           // TransformComponent{ {px, py, pz}, {}, {scale, scale, scale} },
-            TransformComponent{ {0, 0, 0}, {}, {3, 3, 3} },
-            MeshComponent(cubeIndex)
-        }.Spawn(m_World);
+    // --- ECS: create torus with path follower ---
+    Entity torus = MeshObjectPrefab{
+        "Torus",
+        TransformComponent{ {0.f, 0.f, 0.f}, {}, {3.f, 3.f, 3.f} },
+        MeshComponent(cubeIndex)
+    }.Spawn(m_World);
+
+    {
+        PathFollowerComponent pf;
+        pf.path      = std::make_shared<Math::CirclePath>(
+                           DirectX::XMFLOAT3{0.f, 0.f, 0.f}, 4.f);
+        pf.speed     = 3.f;
+        pf.loop      = true;
+        pf.playing   = true;
+        pf.arcLength = -1.f;
+        m_World.AddComponent(torus, std::move(pf));
     }
 
     // --- Camera ---
@@ -169,6 +183,7 @@ bool Sample::LoadContent()
     m_InspectorRegistry.Register<TransformComponent>(m_World, "Transform");
     m_InspectorRegistry.Register<TagComponent>(m_World, "Tag");
     m_InspectorRegistry.Register<MeshComponent>(m_World, "Mesh");
+    m_InspectorRegistry.Register<PathFollowerComponent>(m_World, "Path Follower");
 
     // --- UI: build panel layout ---
     auto& ui = GetUILayer();
@@ -205,23 +220,17 @@ void Sample::OnUpdate(UpdateEventArgs& e)
 {
     Game::OnUpdate(e); // FPS counter
 
-    for (Entity entity : m_TransformSystem->entities)
-    {
-        auto& tc = m_World.GetComponent<TransformComponent>(entity);
-       // tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
-        tc.rotation.x += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 45.0 ));
-        //tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
-    }
-
     // Sync FoV (may have changed via mouse wheel).
     m_Camera.fovY = XMConvertToRadians(m_FoV);
 
     // Run ECS systems.
+    const float dt = static_cast<float>(e.ElapsedTime);
     float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
     m_FrameCtx.Reset();
     m_FrameCtx.viewProj = m_Camera.GetViewProjMatrix(aspectRatio);
     auto camPos = m_Camera.GetPosition();
     m_FrameCtx.cameraPos = { camPos.x, camPos.y, camPos.z, 1.f };
+    m_PathFollowerSystem->Update(m_World, dt);
     m_TransformSystem->Update(m_World);
     m_RenderableSystem->Update(m_World, m_FrameCtx);
 }
