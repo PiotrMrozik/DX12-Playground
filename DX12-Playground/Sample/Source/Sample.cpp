@@ -11,23 +11,10 @@ using namespace Microsoft::WRL;
 #include <directx/d3dx12.h>
 #include <d3dcompiler.h>
 
-#include <Mesh/Vertex.h>
 #include <Mesh/Primitives.h>
 #include <Mesh/MeshRegistry.h>
 
-#include <ECS/Systems/TransformSystem.h>
-#include <ECS/Systems/RenderableSystem.h>
-#include <ECS/Systems/PathFollowerSystem.h>
-#include <ECS/Systems/FrameContext.h>
-#include <ECS/Prefabs/MeshObjectPrefab.h>
-#include <ECS/Prefabs/PointLightPrefab.h>
-#include <ECS/Components/PathFollowerComponent.h>
-#include <ECS/Components/PointLightComponent.h>
 #include <Math/CirclePath.h>
-
-#include <UI/StatsPanel.h>
-#include <UI/SceneHierarchyPanel.h>
-#include <UI/InspectorPanel.h>
 
 #include <algorithm>
 #if defined(min)

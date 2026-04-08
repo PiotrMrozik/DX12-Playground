@@ -4,12 +4,8 @@
 
 #include <Game.h>
 #include <Mesh/MeshRegistry.h>
-#include <ECS/Systems/TransformSystem.h>
-#include <ECS/Systems/RenderableSystem.h>
-#include <ECS/Systems/PathFollowerSystem.h>
-#include <ECS/Systems/LightingSystem.h>
-#include <ECS/Systems/FrameContext.h>
-#include <UI/ComponentInspectorRegistry.h>
+#include <ECS/ECS.h>
+#include <UI/UI.h>
 
 class Sample : public Game
 {
