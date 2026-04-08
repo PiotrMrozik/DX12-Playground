@@ -14,7 +14,8 @@ void SceneHierarchyPanel::Draw()
             label = "Entity #" + std::to_string(entity);
 
         const bool selected = (entity == m_SelectedEntity);
-        if (ImGui::Selectable(label.c_str(), selected))
+        std::string selectableId = label + "##" + std::to_string(entity);
+        if (ImGui::Selectable(selectableId.c_str(), selected))
             m_SelectedEntity = entity;
     }
 
