@@ -299,3 +299,99 @@ MeshData Primitives::CreateTorus(float majorRadius, float minorRadius, uint32_t 
 
     return md;
 }
+
+// ---------------------------------------------------------------------------
+// TorusKnot — tube swept along a (p,q) torus-knot spine
+// ---------------------------------------------------------------------------
+
+MeshData Primitives::CreateTorusKnot(int p, int q, float majorRadius, float minorRadius, float tubeRadius,
+                                     uint32_t pathSegments, uint32_t tubeSegments)
+{
+    MeshData md;
+
+    const float fp = static_cast<float>(p);
+    const float fq = static_cast<float>(q);
+
+    // Spine lying flat in the XZ plane:
+    // P(t) = ((R + r*cos(q*t))*cos(p*t),
+    //          r*sin(q*t),
+    //         (R + r*cos(q*t))*sin(p*t))
+    auto spinePoint = [&](float t) -> XMFLOAT3
+    {
+        float rm = majorRadius + minorRadius * cosf(fq * t);
+        return {rm * cosf(fp * t), minorRadius * sinf(fq * t), rm * sinf(fp * t)};
+    };
+
+    // Analytical tangent dP/dt (avoids finite-difference drift at the seam)
+    auto spineTangent = [&](float t) -> XMFLOAT3
+    {
+        float cosQt = cosf(fq * t), sinQt = sinf(fq * t);
+        float cosPt = cosf(fp * t), sinPt = sinf(fp * t);
+        float rm  = majorRadius + minorRadius * cosQt;
+        float drm = -minorRadius * fq * sinQt; // d(rm)/dt
+        return {drm * cosPt - fp * rm * sinPt,
+                minorRadius * fq * cosQt,
+                drm * sinPt + fp * rm * cosPt};
+    };
+
+    // Generate exactly pathSegments rings — no duplicate first/last ring.
+    // Seam closure is handled by modulo wrapping in the index loop below.
+    for (uint32_t i = 0; i < pathSegments; ++i)
+    {
+        float t = XM_2PI * static_cast<float>(i) / static_cast<float>(pathSegments);
+
+        XMFLOAT3 s0f  = spinePoint(t);
+        XMFLOAT3 tanf = spineTangent(t);
+        XMVECTOR s0   = XMLoadFloat3(&s0f);
+        XMVECTOR T    = XMVector3Normalize(XMLoadFloat3(&tanf));
+
+        // Frame: project the outward radial direction perpendicular to T,
+        // then derive normal as cross(B, T).
+        XMVECTOR radial = XMVector3Normalize(s0);
+        XMVECTOR B      = XMVector3Normalize(XMVector3Cross(T, radial));
+        XMVECTOR N      = XMVector3Cross(B, T); // already unit length
+
+        // Generate tubeSegments vertices per ring — no duplicate first/last vertex.
+        // Seam closure handled by modulo wrapping below.
+        for (uint32_t j = 0; j < tubeSegments; ++j)
+        {
+            float phi    = XM_2PI * static_cast<float>(j) / static_cast<float>(tubeSegments);
+            float cosPhi = cosf(phi);
+            float sinPhi = sinf(phi);
+
+            XMVECTOR offset = XMVectorAdd(XMVectorScale(N, tubeRadius * cosPhi),
+                                          XMVectorScale(B, tubeRadius * sinPhi));
+            XMVECTOR pos    = XMVectorAdd(s0, offset);
+            XMVECTOR norm   = XMVector3Normalize(offset);
+
+            XMFLOAT3 pf, nf;
+            XMStoreFloat3(&pf, pos);
+            XMStoreFloat3(&nf, norm);
+            PushVertex(md, pf.x, pf.y, pf.z, nf.x, nf.y, nf.z);
+        }
+    }
+
+    // Wrap both axes with modulo — no seam from duplicate vertices
+    for (uint32_t i = 0; i < pathSegments; ++i)
+    {
+        uint32_t ni = (i + 1) % pathSegments;
+        for (uint32_t j = 0; j < tubeSegments; ++j)
+        {
+            uint32_t nj = (j + 1) % tubeSegments;
+            uint16_t a  = static_cast<uint16_t>(i  * tubeSegments + j);
+            uint16_t b  = static_cast<uint16_t>(i  * tubeSegments + nj);
+            uint16_t c  = static_cast<uint16_t>(ni * tubeSegments + j);
+            uint16_t d  = static_cast<uint16_t>(ni * tubeSegments + nj);
+
+            md.indices.push_back(a);
+            md.indices.push_back(b);
+            md.indices.push_back(c);
+
+            md.indices.push_back(b);
+            md.indices.push_back(d);
+            md.indices.push_back(c);
+        }
+    }
+
+    return md;
+}
