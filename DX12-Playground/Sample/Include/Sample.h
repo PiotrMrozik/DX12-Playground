@@ -7,6 +7,7 @@
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
 #include <ECS/Systems/PathFollowerSystem.h>
+#include <ECS/Systems/LightingSystem.h>
 #include <ECS/Systems/FrameContext.h>
 #include <UI/ComponentInspectorRegistry.h>
 
@@ -41,6 +42,11 @@ private:
     std::shared_ptr<TransformSystem>     m_TransformSystem;
     std::shared_ptr<RenderableSystem>    m_RenderableSystem;
     std::shared_ptr<PathFollowerSystem>  m_PathFollowerSystem;
+    std::shared_ptr<PointLightSystem>    m_PointLightSystem;
+
+    // Upload buffer for point light constant buffer (persistently mapped)
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_PointLightCB;
+    void*                                  m_PointLightCBMapped{ nullptr };
 
     FrameContext m_FrameCtx;
 

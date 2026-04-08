@@ -20,7 +20,9 @@ using namespace Microsoft::WRL;
 #include <ECS/Systems/PathFollowerSystem.h>
 #include <ECS/Systems/FrameContext.h>
 #include <ECS/Prefabs/MeshObjectPrefab.h>
+#include <ECS/Prefabs/PointLightPrefab.h>
 #include <ECS/Components/PathFollowerComponent.h>
+#include <ECS/Components/PointLightComponent.h>
 #include <Math/CirclePath.h>
 
 #include <UI/StatsPanel.h>
@@ -37,6 +39,18 @@ using namespace Microsoft::WRL;
 
 using namespace DirectX;
 
+static constexpr uint32_t MAX_POINT_LIGHTS = 8; // must match shader #define
+
+struct PointLightCBuffer
+{
+    uint32_t      count;
+    float         _pad[3];
+    PointLightData lights[MAX_POINT_LIGHTS];
+};
+
+static constexpr UINT PointLightCBSize =
+    (sizeof(PointLightCBuffer) + 255u) & ~255u; // round up to 256-byte alignment
+
 Sample::Sample(const std::wstring& name, int width, int height, bool vSync)
     : Game(name, width, height, vSync)
 {
@@ -50,7 +64,7 @@ bool Sample::LoadContent()
 
     // Upload primitive meshes via the registry.
     std::vector<ComPtr<ID3D12Resource>> intermediates;
-    uint32_t cubeIndex = m_MeshRegistry.Add(Primitives::CreateTorus(), device, commandList, intermediates);
+    uint32_t cubeIndex = m_MeshRegistry.Add(Primitives::CreateTorusKnot(), device, commandList, intermediates);
 
     // Load shaders.
     ComPtr<ID3DBlob> vertexShaderBlob;
@@ -78,10 +92,12 @@ bool Sample::LoadContent()
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-    CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+    CD3DX12_ROOT_PARAMETER1 rootParameters[4];
     rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: World
     rootParameters[1].InitAsConstants(sizeof(XMMATRIX) / 4, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b1: VP
     rootParameters[2].InitAsConstants(sizeof(XMFLOAT4) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);  // b0: CameraPos (PS)
+    rootParameters[3].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+                                               D3D12_SHADER_VISIBILITY_PIXEL);                      // b1: PointLightBuffer (PS)
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
@@ -131,6 +147,7 @@ bool Sample::LoadContent()
     m_World.RegisterComponent<TagComponent>();
     m_World.RegisterComponent<MeshComponent>();
     m_World.RegisterComponent<PathFollowerComponent>();
+    m_World.RegisterComponent<PointLightComponent>();
 
     // --- ECS: register systems ---
     m_TransformSystem = m_World.RegisterSystem<TransformSystem>();
@@ -156,22 +173,48 @@ bool Sample::LoadContent()
         m_World.SetSystemSignature<PathFollowerSystem>(sig);
     }
 
-    // --- ECS: create torus with path follower ---
-    Entity torus = MeshObjectPrefab{
-        "Torus",
+    m_PointLightSystem = m_World.RegisterSystem<PointLightSystem>();
+    {
+        EntitySignature sig;
+        sig.set(m_World.GetComponentType<TransformComponent>());
+        sig.set(m_World.GetComponentType<PointLightComponent>());
+        m_World.SetSystemSignature<PointLightSystem>(sig);
+    }
+
+    // --- ECS: create torus (static at origin) ---
+    MeshObjectPrefab{
+        "TorusKnot",
         TransformComponent{ {0.f, 0.f, 0.f}, {}, {3.f, 3.f, 3.f} },
         MeshComponent(cubeIndex)
     }.Spawn(m_World);
 
+    // --- Point lights — each on its own orbit around the scene origin ---
     {
-        PathFollowerComponent pf;
-        pf.path      = std::make_shared<Math::CirclePath>(
-                           DirectX::XMFLOAT3{0.f, 0.f, 0.f}, 4.f);
-        pf.speed     = 3.f;
-        pf.loop      = true;
-        pf.playing   = true;
-        pf.arcLength = -1.f;
-        m_World.AddComponent(torus, std::move(pf));
+        struct LightDesc { XMFLOAT3 color; float orbitRadius; float orbitHeight; float speed; float startT; XMFLOAT3 normal; };
+        const LightDesc lights[] = {
+            { { 1.0f, 0.5f, 0.3f }, 6.f, 3.f, 4.0f, 0.00f, {  0.3f, 1.0f,  0.2f } }, // warm orange — slight forward tilt
+            { { 0.3f, 0.6f, 1.0f }, 9.f, 5.f, 4.6f, 0.25f, { -0.5f, 0.8f,  0.4f } }, // cool blue   — left-leaning
+            { { 0.4f, 1.0f, 0.5f }, 7.f, 2.f, 8.0f, 0.50f, {  0.6f, 0.6f, -0.5f } }, // green       — steep diagonal
+            { { 1.0f, 0.3f, 0.8f }, 5.f, 6.f, 6.0f, 0.75f, {  0.1f, 0.5f,  0.9f } }, // pink        — near-horizontal
+        };
+        for (const auto& ld : lights)
+        {
+            PointLightPrefab prefab;
+            prefab.light.color     = ld.color;
+            prefab.light.intensity = 2.0f;
+            prefab.light.radius    = 15.f;
+            Entity e = prefab.Spawn(m_World);
+
+            PathFollowerComponent pf;
+            pf.path      = std::make_shared<Math::CirclePath>(
+                               DirectX::XMFLOAT3{0.f, ld.orbitHeight, 0.f}, ld.orbitRadius, ld.normal);
+            pf.speed     = ld.speed;
+            pf.t         = ld.startT;
+            pf.loop      = true;
+            pf.playing   = true;
+            pf.arcLength = -1.f;
+            m_World.AddComponent(e, std::move(pf));
+        }
     }
 
     // --- Camera ---
@@ -203,6 +246,18 @@ bool Sample::LoadContent()
         ImGui::End();
     });
 
+    // --- Point light constant buffer (upload heap, persistently mapped) ---
+    {
+        auto heapProps  = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(PointLightCBSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+            IID_PPV_ARGS(&m_PointLightCB)));
+
+        m_PointLightCB->Map(0, nullptr, &m_PointLightCBMapped);
+    }
+
     m_ContentLoaded = true;
 
     ResizeMSAAResources(GetClientWidth(), GetClientHeight());
@@ -233,6 +288,7 @@ void Sample::OnUpdate(UpdateEventArgs& e)
     m_PathFollowerSystem->Update(m_World, dt);
     m_TransformSystem->Update(m_World);
     m_RenderableSystem->Update(m_World, m_FrameCtx);
+    m_PointLightSystem->Update(m_World, m_FrameCtx);
 }
 
 void Sample::ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
@@ -279,6 +335,17 @@ void Sample::OnRender(RenderEventArgs& e)
 
     commandList->SetGraphicsRoot32BitConstants(1, sizeof(XMMATRIX) / 4, &m_FrameCtx.viewProj, 0);
     commandList->SetGraphicsRoot32BitConstants(2, sizeof(XMFLOAT4) / 4, &m_FrameCtx.cameraPos, 0);
+
+    // Upload point light data and bind root CBV (slot 3 → PS b1)
+    {
+        PointLightCBuffer lightCB{};
+        lightCB.count = static_cast<uint32_t>(
+            std::min(m_FrameCtx.pointLights.size(), static_cast<size_t>(MAX_POINT_LIGHTS)));
+        std::memcpy(lightCB.lights, m_FrameCtx.pointLights.data(),
+                    lightCB.count * sizeof(PointLightData));
+        std::memcpy(m_PointLightCBMapped, &lightCB, sizeof(PointLightCBuffer));
+    }
+    commandList->SetGraphicsRootConstantBufferView(3, m_PointLightCB->GetGPUVirtualAddress());
 
     for (const auto& entry : m_FrameCtx.renderList)
     {
