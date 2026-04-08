@@ -14,7 +14,7 @@ BezierPath::BezierPath(std::vector<XMFLOAT3> controlPoints)
     assert(m_ControlPoints.size() >= 2 && "BezierPath requires at least 2 control points");
 }
 
-// de Casteljau evaluation — O(N^2) in degree, stable for any N.
+// de Casteljau evaluation - O(N^2) in degree, stable for any N.
 XMFLOAT3 BezierPath::Evaluate(float t) const
 {
     // Copy into a working XMVECTOR buffer.

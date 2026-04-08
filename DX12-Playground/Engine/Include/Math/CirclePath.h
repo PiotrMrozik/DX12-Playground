@@ -11,9 +11,9 @@ namespace Math {
 class CirclePath : public Path
 {
 public:
-    // center  — world-space center of the circle
-    // radius  — circle radius
-    // normal  — axis the circle is perpendicular to (default: Y-up)
+    // center  - world-space center of the circle
+    // radius  - circle radius
+    // normal  - axis the circle is perpendicular to (default: Y-up)
     CirclePath(DirectX::XMFLOAT3 center, float radius,
                DirectX::XMFLOAT3 normal = { 0.f, 1.f, 0.f });
 

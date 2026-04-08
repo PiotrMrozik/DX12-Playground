@@ -49,7 +49,7 @@ protected:
     friend class Window;
 
     // ---------------------------------------------------------------
-    // Event handlers — all have default implementations
+    // Event handlers - all have default implementations
     // ---------------------------------------------------------------
     virtual void OnUpdate(UpdateEventArgs& e);
     virtual void OnRender(RenderEventArgs& e);
@@ -121,7 +121,7 @@ protected:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
 
-    // MSAA parameters — queried in Initialize() (E)
+    // MSAA parameters - queried in Initialize() (E)
     UINT m_MSAASampleCount = 4;
     UINT m_MSAAQualityLevel = 0;
 
@@ -133,13 +133,13 @@ protected:
 
     std::shared_ptr<Window> m_pWindow;
 
-    // ECS world — owns all entities, components, and systems for this game.
+    // ECS world - owns all entities, components, and systems for this game.
     World m_World;
 
-    // Orbit camera — owned by Game, driven by mouse input handlers.
+    // Orbit camera - owned by Game, driven by mouse input handlers.
     OrbitCamera m_Camera{};
 
-    // UI layer — owns all panels, drives ImGui dockspace.
+    // UI layer - owns all panels, drives ImGui dockspace.
     UILayer m_UILayer;
 
 private:

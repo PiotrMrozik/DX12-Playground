@@ -27,7 +27,7 @@ void Game::ImGuiSrvDescAllocator::Create(ID3D12Device* device, ID3D12DescriptorH
 
 void Game::ImGuiSrvDescAllocator::Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu)
 {
-    assert(!FreeIndices.empty() && "ImGui SRV descriptor heap exhausted — increase heap size.");
+    assert(!FreeIndices.empty() && "ImGui SRV descriptor heap exhausted - increase heap size.");
     int idx = FreeIndices.back();
     FreeIndices.pop_back();
     outCpu->ptr = HeapStartCpu.ptr + static_cast<SIZE_T>(idx) * Increment;

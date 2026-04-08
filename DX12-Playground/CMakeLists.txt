@@ -24,7 +24,7 @@ set_directory_properties( PROPERTIES
     VS_STARTUP_PROJECT Sample
 )
 
-# clang-format target — run: cmake --build . --target format
+# clang-format target - run: cmake --build . --target format
 find_program( CLANG_FORMAT_EXE NAMES clang-format )
 if( CLANG_FORMAT_EXE )
     file( GLOB_RECURSE FORMAT_SOURCE_FILES CONFIGURE_DEPENDS
@@ -40,5 +40,5 @@ if( CLANG_FORMAT_EXE )
     )
     set_target_properties( format PROPERTIES FOLDER "Utility" )
 else()
-    message( STATUS "clang-format not found — 'format' target unavailable" )
+    message( STATUS "clang-format not found - 'format' target unavailable" )
 endif()

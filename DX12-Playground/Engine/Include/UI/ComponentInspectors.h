@@ -26,7 +26,7 @@ inline void InspectComponent(TransformComponent& tc)
 
 inline void InspectComponent(TagComponent& /*tag*/)
 {
-    // Tag is shown as a header in InspectorPanel — no separate section needed.
+    // Tag is shown as a header in InspectorPanel - no separate section needed.
 }
 
 inline void InspectComponent(MeshComponent& mc)

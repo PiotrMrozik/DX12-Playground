@@ -3,7 +3,7 @@
 
 #include <cstdio>
 
-// Default docking layout — applied once on first launch (when imgui.ini doesn't exist yet).
+// Default docking layout - applied once on first launch (when imgui.ini doesn't exist yet).
 // Regenerate by arranging panels to taste, then copying the relevant sections from imgui.ini.
 static const char* s_DefaultLayout = R"ini(
 [Window][WindowOverViewport_11111111]
@@ -67,7 +67,7 @@ void UILayer::Draw()
             ImGui::LoadIniSettingsFromMemory(s_DefaultLayout);
     }
 
-    // Full-window dockspace — PassthruCentralNode keeps the 3D viewport visible.
+    // Full-window dockspace - PassthruCentralNode keeps the 3D viewport visible.
     ImGui::DockSpaceOverViewport(
         0,
         ImGui::GetMainViewport(),

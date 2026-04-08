@@ -3,7 +3,7 @@
 #include <ECS/Component/ComponentManager.h>
 
 // -----------------------------------------------------------------------
-// Local test-only components — plain POD, no engine dependencies.
+// Local test-only components - plain POD, no engine dependencies.
 // Anonymous namespace prevents ODR conflicts with other translation units.
 // -----------------------------------------------------------------------
 namespace
@@ -25,7 +25,7 @@ struct Health
 } // namespace
 
 // -----------------------------------------------------------------------
-// Fixture — registers three components once per test.
+// Fixture - registers three components once per test.
 // -----------------------------------------------------------------------
 class ComponentManagerTest : public ::testing::Test
 {
@@ -93,7 +93,7 @@ TEST_F(ComponentManagerTest, MultipleEntities_IndependentData)
 }
 
 // -----------------------------------------------------------------------
-// Remove — ComponentArray uses a swap-with-last strategy to stay packed.
+// Remove - ComponentArray uses a swap-with-last strategy to stay packed.
 // After removing entity N the remaining entities must still be reachable
 // with correct data.
 // -----------------------------------------------------------------------
@@ -133,7 +133,7 @@ TEST_F(ComponentManagerTest, RemoveComponent_DoesNotAffectOtherComponentTypes)
 }
 
 // -----------------------------------------------------------------------
-// EntityDestroyed — must clean up all component arrays for that entity.
+// EntityDestroyed - must clean up all component arrays for that entity.
 // -----------------------------------------------------------------------
 
 TEST_F(ComponentManagerTest, EntityDestroyed_AllowsReinsertion)

@@ -10,16 +10,24 @@
 
 ---
 
+<p align="center">
+  <img src="docs/KnotTorus_Phong.gif" alt="Torus Knot with Blinn-Phong multi-light shading" width="640"/>
+</p>
+
+<p align="center"><em>Torus knot with Blinn-Phong multi-light shading.</em></p>
+
+---
+
 ## Overview
 
-This project is a ground-up DirectX 12 renderer written in C++17. The goal is to learn and demonstrate modern graphics programming concepts — explicit GPU synchronisation, multi-buffered rendering, MSAA, and a data-driven **Entity-Component-System** architecture — without hiding complexity behind a high-level engine.
+This project is a ground-up DirectX 12 renderer written in C++17. The goal is to learn and demonstrate modern graphics programming concepts - explicit GPU synchronisation, multi-buffered rendering, MSAA, and a data-driven **Entity-Component-System** architecture - without hiding complexity behind a high-level engine.
 
 The codebase is split into two clean layers:
 
 | Target | Type | Role |
 |--------|------|------|
-| **Engine** | Static library | DX12 infrastructure, ECS, camera, abstractions |
-| **Sample** | WIN32 executable | Concrete demo scene. Still growing field.|
+| **Engine** | Static library | DX12 infrastructure, ECS, camera, UI layer, math abstractions |
+| **Sample** | WIN32 executable | Concrete demo scene — grows with each feature |
 
 ---
 
@@ -27,24 +35,37 @@ The codebase is split into two clean layers:
 
 ### Rendering
 - **DirectX 12** — explicit command lists, command queues, and resource management
-- **Triple-buffered swap chain** — `IDXGISwapChain4`, 3 back buffers, proper per-frame fence tracking
+- **Triple-buffered swap chain** — `IDXGISwapChain4`, 3 back buffers, per-frame fence tracking
 - **4× MSAA** — multisampled colour + depth targets with a 5-phase resolve pass
-- **Phong shading** — per-vertex normals, ambient + diffuse + specular in HLSL
+- **Blinn-Phong shading** — ambient + diffuse + specular in HLSL, evaluated per-fragment
+- **Multi-light support** — multiple point lights processed in a single shader pass via `PointLightSystem`
 - **GPU-based validation** in Debug builds for catching API misuse early
 - **VSync toggle** and **borderless fullscreen**
 
-### Architecture
-- **Entity-Component-System (ECS)** — data-driven scene graph with dense packed component storage
-- **Command queue abstraction** — pooled command allocators and command lists for direct, compute, and copy queues
-- **Orbit camera** — mouse-driven arcball camera with configurable FoV zoom
+### Scene & ECS
+- **Entity-Component-System** — data-driven scene graph with dense-packed component storage
+- **PathFollower system** — entities animate along **Bezier** or **Circle** paths at runtime
+- **PointLightPrefab** — convenience factory for placing point lights into the ECS world
+- **Orbit camera** — mouse-driven arcball with configurable FoV zoom
 
-### Build & tooling
+### UI
+- **ImGui integration** with docking layout
+- **SceneHierarchyPanel** — live inspector: browse entities, inspect transform / mesh / light / path components
+- **UILayer** — thin rendering layer that owns all ImGui panels, decoupled from scene logic
+
+### Mesh
+- **MeshRegistry** — named GPU mesh store with handle-based lookup
+- **Procedural primitives** — Cube, Sphere, Plane, Cylinder, Torus, **Torus Knot**
+
+### Math
+- **Path abstractions** — `BezierPath` (cubic spline) and `CirclePath` for smooth entity motion
+
+### Build & Tooling
 - **CMake + vcpkg** — reproducible builds, no manual DLL management
 - **Precompiled headers** — fast incremental builds via `DX12LibPCH.h`
 - **HLSL compilation** integrated into CMake via `VS_SHADER_*` properties
 
 ---
-
 
 ## Architecture Deep-Dive
 
@@ -52,50 +73,64 @@ The codebase is split into two clean layers:
 
 ```
 Engine/
-├── Application        Singleton — owns DX12 device + 3 CommandQueues (direct/compute/copy)
-├── CommandQueue       Wraps ID3D12CommandQueue + fence. Pools allocators and command lists.
-├── Window             Manages IDXGISwapChain4, RTV heap, vsync, fullscreen, event dispatch
-├── Game               Abstract base — MSAA resources, per-frame sync, viewport, shared helpers
+├── Application          Singleton — owns DX12 device + 3 CommandQueues (direct/compute/copy)
+├── CommandQueue         Wraps ID3D12CommandQueue + fence; pools allocators and command lists
+├── Window               Manages IDXGISwapChain4, RTV heap, vsync, fullscreen, event dispatch
+├── Game                 Abstract base — MSAA resources, per-frame sync, viewport, shared helpers
 ├── HighResolutionClock  Delta-time and FPS measurement
 │
 ├── ECS/
-│   ├── Globals            Entity, ComponentType, EntitySignature
-│   ├── EntityManager      ID recycling queue, signature storage
-│   ├── ComponentArray<T>  Dense packed storage (no holes), O(1) add/remove/lookup
-│   ├── ComponentManager   type_index → ComponentArray dispatch
-│   ├── System             Base class; owns a filtered set of matching Entity IDs
-│   ├── SystemManager      Routes EntitySignatureChanged → system entity sets
-│   └── World              Public façade: CreateEntity, Add/Remove/GetComponent, RegisterSystem
+│   ├── Globals              Entity, ComponentType, EntitySignature
+│   ├── EntityManager        ID recycling queue, signature storage
+│   ├── ComponentArray<T>    Dense packed storage (no holes), O(1) add/remove/lookup
+│   ├── ComponentManager     type_index → ComponentArray dispatch
+│   ├── System               Base class; owns a filtered set of matching Entity IDs
+│   ├── SystemManager        Routes EntitySignatureChanged → system entity sets
+│   └── World                Public façade: CreateEntity, Add/Remove/GetComponent, RegisterSystem
 │
 ├── Components/
-│   ├── TransformComponent    position / rotation (Euler) / scale → GetWorldMatrix()
-│   ├── TagComponent          string name
-│   ├── MeshComponent         mesh handle (no DX objects)
+│   ├── TransformComponent        position / rotation (Euler) / scale → GetWorldMatrix()
+│   ├── TagComponent              string name
+│   ├── MeshComponent             mesh handle (no DX objects)
 │   ├── DirectionalLightComponent
-│   ├── PointLightComponent
-│   └── RigidBodyComponent    velocity / angular velocity / mass
+│   ├── PointLightComponent       position, colour, intensity, attenuation
+│   ├── PathFollowerComponent     path pointer, speed, accumulated t
+│   └── RigidBodyComponent        velocity / angular velocity / mass
 │
 ├── Systems/
 │   ├── TransformSystem
 │   ├── RenderableSystem
 │   ├── LightingSystem
+│   ├── PointLightSystem      Collects point lights and uploads them to the shader CB
+│   ├── PathFollowerSystem    Advances t along a Path and writes back TransformComponent
 │   └── FrameContext          Per-frame scene state passed to render systems
 │
 ├── Camera/
 │   └── OrbitCamera           Arcball orbit with configurable FoV
 │
+├── UI/
+│   ├── UILayer               Owns the ImGui render pass and all panel instances
+│   └── SceneHierarchyPanel   Entity list + per-component inspector (transform, mesh, lights, path)
+│
+├── Math/
+│   ├── Path.h                Abstract base — Evaluate(t) → float3
+│   ├── BezierPath            Cubic Bezier spline through N control points
+│   └── CirclePath            Parametric circle in a given plane / radius
+│
 └── Mesh/
-    └── Vertex.h              Vertex layout (position + normal + UV)
+    ├── Vertex.h              Vertex layout (position + normal + UV)
+    ├── MeshData.h            CPU-side vertex/index data
+    ├── Mesh.h                GPU-uploaded mesh (VB + IB views)
+    ├── MeshRegistry          Owns GPU meshes, Add(name, data) → handle lookup
+    └── Primitives            Factory: Cube, Sphere, Plane, Cylinder, Torus, TorusKnot
 ```
 
 ### Sample Application
 
 The `Sample` is intentionally thin — it only contains:
-- **Scene setup** (`LoadContent`): uploads vertex/index buffers, builds PSO with 4× MSAA sample desc
-- **Update** (`OnUpdate`): rotates 100 cubes independently via ECS `TransformComponent`
-- **Render** (`OnRender`): 5-phase MSAA render loop → clear → draw → resolve → present
-
-All shared infrastructure (MSAA targets, depth buffer, viewport, event handling, sync) lives in `Game`.
+- **Scene setup** (`LoadContent`): registers primitives, spawns ECS entities (including a torus knot on a circle path with surrounding point lights), builds PSO with 4× MSAA
+- **Update** (`OnUpdate`): ticks `PathFollowerSystem` + `PointLightSystem`, drives the UI layer
+- **Render** (`OnRender`): 5-phase MSAA render loop → clear → draw → resolve → present → ImGui overlay
 
 ### MSAA Render Loop (5 phases)
 
@@ -183,6 +218,7 @@ out\build\windows\Debug\DX12Playground.exe
 |-------|--------|
 | `V` | Toggle VSync |
 | `Alt+Enter` / `F11` | Toggle fullscreen |
+| `Mouse drag` | Orbit camera |
 | `Mouse wheel` | Zoom (FoV) |
 | `Escape` | Quit |
 
@@ -193,6 +229,7 @@ out\build\windows\Debug\DX12Playground.exe
 | Library | Source | Purpose |
 |---------|--------|---------|
 | `directx-headers` 1.619.1 | vcpkg | `<directx/d3d12.h>`, `<directx/d3dx12.h>` |
+| `imgui` | vcpkg | Immediate-mode UI, docking branch |
 | `d3d12.lib` | Windows SDK | D3D12 device, command lists, resources |
 | `dxgi.lib` | Windows SDK | Swap chain, adapter enumeration |
 | `d3dcompiler.lib` | Windows SDK | Runtime shader compilation |
@@ -205,16 +242,20 @@ out\build\windows\Debug\DX12Playground.exe
 
 ## Roadmap
 
-### In Progress
-- [x] Integrate World into Sample: replace hard-coded cubes with ECS-driven entities
+### Done
+- [x] ECS-driven scene (entities with Transform, Mesh, Tag, RigidBody components)
+- [x] MeshRegistry + procedural primitives (cube, sphere, plane, cylinder, torus, torus knot)
+- [x] Blinn-Phong shading (ambient + diffuse + specular)
+- [x] Multi-light rendering — point lights via `PointLightSystem`
+- [x] OrbitCamera with FoV zoom
+- [x] PathFollower system — Bezier and circle path animations
+- [x] ImGui overlay with docking — SceneHierarchyPanel for runtime scene inspection
 
 ### Up Next
-
 - [ ] GPU constant buffer per entity (CB-per-draw or instancing)
 - [ ] Texture loading (WIC / DirectXTex)
 - [ ] Shadow mapping (directional light)
 - [ ] Deferred shading G-buffer pass
-- [ ] ImGui overlay for runtime scene inspection
 
 ---
 
@@ -224,16 +265,18 @@ out\build\windows\Debug\DX12Playground.exe
 DX12-Playground/              ← repo root
 ├── README.md
 ├── LICENSE
+├── docs/                     ← reference documents and media assets
 └── DX12-Playground/          ← CMake source root
     ├── CMakeLists.txt
     ├── CMakePresets.json
     ├── Engine/
-    │   ├── Include/          ← public headers
+    │   ├── Include/          ← public headers (ECS, Mesh, Camera, UI, Math, ...)
     │   └── Source/           ← implementation
-    └── Sample/
-        ├── Include/
-        ├── Source/
-        └── Shaders/          ← HLSL vertex + pixel shaders
+    ├── Sample/
+    │   ├── Include/
+    │   ├── Source/
+    │   └── Shaders/          ← HLSL vertex + pixel shaders
+    └── Tests/                ← GTest unit tests (ECS core)
 ```
 
 ---

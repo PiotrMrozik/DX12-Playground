@@ -46,7 +46,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
         float3 L = toLight / dist;
 
-        // Quadratic attenuation — full at centre, zero at radius
+        // Quadratic attenuation - full at centre, zero at radius
         float t           = saturate(dist / light.radius);
         float attenuation = (1.0f - t) * (1.0f - t);
 

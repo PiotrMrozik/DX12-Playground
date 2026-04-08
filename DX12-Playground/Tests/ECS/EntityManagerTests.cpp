@@ -4,7 +4,7 @@
 #include <ECS/Entity/EntityManager.h>
 
 // -----------------------------------------------------------------------
-// EntityManager — unit tests
+// EntityManager - unit tests
 //
 // EntityManager owns the pool of valid entity IDs [0, MAX_ENTITIES) and
 // the per-entity signature bitsets.  Tests verify creation, destruction,

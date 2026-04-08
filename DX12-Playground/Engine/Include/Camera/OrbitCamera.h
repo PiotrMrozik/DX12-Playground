@@ -1,7 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 
-// Standalone orbit camera — not an ECS component.
+// Standalone orbit camera - not an ECS component.
 // Owned directly by World and updated by Game each frame.
 // Orbits around `target` using spherical coordinates (yaw / pitch).
 class OrbitCamera

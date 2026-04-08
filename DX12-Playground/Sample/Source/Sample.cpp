@@ -73,7 +73,7 @@ bool Sample::LoadContent()
     ComPtr<ID3DBlob> pixelShaderBlob;
     ThrowIfFailed(D3DReadFileToBlob(L"PixelShader.cso", &pixelShaderBlob));
 
-    // Vertex input layout — matches VertexNormal (Position + Normal).
+    // Vertex input layout - matches VertexNormal (Position + Normal).
     D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -188,14 +188,14 @@ bool Sample::LoadContent()
         MeshComponent(cubeIndex)
     }.Spawn(m_World);
 
-    // --- Point lights — each on its own orbit around the scene origin ---
+    // --- Point lights - each on its own orbit around the scene origin ---
     {
         struct LightDesc { XMFLOAT3 color; float orbitRadius; float orbitHeight; float speed; float startT; XMFLOAT3 normal; };
         const LightDesc lights[] = {
-            { { 1.0f, 0.5f, 0.3f }, 6.f, 3.f, 4.0f, 0.00f, {  0.3f, 1.0f,  0.2f } }, // warm orange — slight forward tilt
-            { { 0.3f, 0.6f, 1.0f }, 9.f, 5.f, 4.6f, 0.25f, { -0.5f, 0.8f,  0.4f } }, // cool blue   — left-leaning
-            { { 0.4f, 1.0f, 0.5f }, 7.f, 2.f, 8.0f, 0.50f, {  0.6f, 0.6f, -0.5f } }, // green       — steep diagonal
-            { { 1.0f, 0.3f, 0.8f }, 5.f, 6.f, 6.0f, 0.75f, {  0.1f, 0.5f,  0.9f } }, // pink        — near-horizontal
+            { { 1.0f, 0.5f, 0.3f }, 6.f, 3.f, 4.0f, 0.00f, {  0.3f, 1.0f,  0.2f } }, // warm orange - slight forward tilt
+            { { 0.3f, 0.6f, 1.0f }, 9.f, 5.f, 4.6f, 0.25f, { -0.5f, 0.8f,  0.4f } }, // cool blue   - left-leaning
+            { { 0.4f, 1.0f, 0.5f }, 7.f, 2.f, 8.0f, 0.50f, {  0.6f, 0.6f, -0.5f } }, // green       - steep diagonal
+            { { 1.0f, 0.3f, 0.8f }, 5.f, 6.f, 6.0f, 0.75f, {  0.1f, 0.5f,  0.9f } }, // pink        - near-horizontal
         };
         for (const auto& ld : lights)
         {

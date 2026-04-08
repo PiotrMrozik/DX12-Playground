@@ -14,7 +14,7 @@ MeshData CreatePlane(float width = 1.0f, float depth = 1.0f);
 MeshData CreateCylinder(float radius = 0.5f, float height = 1.0f, uint32_t slices = 16);
 MeshData CreateTorus(float majorRadius = 0.5f, float minorRadius = 0.2f, uint32_t majorSegments = 64,
                      uint32_t minorSegments = 16);
-/// Torus knot — a tube wound p times around and q times through a torus.
+/// Torus knot - a tube wound p times around and q times through a torus.
 /// Classic examples: (2,3) trefoil, (3,5) cinquefoil.
 MeshData CreateTorusKnot(int p = 3, int q = 5, float majorRadius = 0.8f, float minorRadius = 0.3f,
                          float tubeRadius = 0.2f, uint32_t pathSegments = 256, uint32_t tubeSegments = 32);

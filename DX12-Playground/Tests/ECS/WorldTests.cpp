@@ -5,7 +5,7 @@
 #include <ECS/System/System.h>
 
 // -----------------------------------------------------------------------
-// Local test-only components — plain POD, no engine dependencies.
+// Local test-only components - plain POD, no engine dependencies.
 // -----------------------------------------------------------------------
 namespace {
 
@@ -21,7 +21,7 @@ class PhysicsSystem  : public System {};
 } // namespace
 
 // -----------------------------------------------------------------------
-// Fixture — registers three components once per test.
+// Fixture - registers three components once per test.
 // -----------------------------------------------------------------------
 class WorldTest : public ::testing::Test
 {
@@ -126,7 +126,7 @@ TEST_F(WorldTest, GetComponent_ReturnsLiveReference)
 }
 
 // -----------------------------------------------------------------------
-// System entity tracking — the core ECS contract:
+// System entity tracking - the core ECS contract:
 //   An entity is in a system's set iff its signature is a superset of
 //   the system's required signature.
 // -----------------------------------------------------------------------
@@ -142,11 +142,11 @@ TEST_F(WorldTest, System_EntityAddedOnlyWhenAllRequiredComponentsPresent)
 
     Entity e = world.CreateEntity();
 
-    // Only Position — should NOT be in the movement system yet.
+    // Only Position - should NOT be in the movement system yet.
     world.AddComponent<PosComp>(e, {});
     EXPECT_EQ(sys->entities.count(e), 0u);
 
-    // Add Velocity — now the signature matches, entity enters the system.
+    // Add Velocity - now the signature matches, entity enters the system.
     world.AddComponent<VelComp>(e, {});
     EXPECT_EQ(sys->entities.count(e), 1u);
 }
@@ -198,11 +198,11 @@ TEST_F(WorldTest, MultipleSystems_EachTracksOnlyMatchingEntities)
     renSig.set(world.GetComponentType<PosComp>());
     world.SetSystemSignature<RenderSystem>(renSig);
 
-    // e1: Pos only  — render only
+    // e1: Pos only  - render only
     Entity e1 = world.CreateEntity();
     world.AddComponent<PosComp>(e1, {});
 
-    // e2: Pos + Vel — both systems
+    // e2: Pos + Vel - both systems
     Entity e2 = world.CreateEntity();
     world.AddComponent<PosComp>(e2, {});
     world.AddComponent<VelComp>(e2, {});
@@ -216,7 +216,7 @@ TEST_F(WorldTest, MultipleSystems_EachTracksOnlyMatchingEntities)
 TEST_F(WorldTest, SystemWithEmptySignature_TracksAllEntities)
 {
     auto sys = world.RegisterSystem<PhysicsSystem>();
-    // Empty signature — every entity matches.
+    // Empty signature - every entity matches.
     world.SetSystemSignature<PhysicsSystem>(EntitySignature{});
 
     Entity e1 = world.CreateEntity();

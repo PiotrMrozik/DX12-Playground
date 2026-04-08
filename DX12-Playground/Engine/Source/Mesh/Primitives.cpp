@@ -17,7 +17,7 @@ static void PushVertex(MeshData& md, float px, float py, float pz, float nx, flo
 }
 
 // ---------------------------------------------------------------------------
-// Cube — 24 vertices (unique normals per face), 36 indices
+// Cube - 24 vertices (unique normals per face), 36 indices
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreateCube(float size)
@@ -73,7 +73,7 @@ MeshData Primitives::CreateCube(float size)
 }
 
 // ---------------------------------------------------------------------------
-// Sphere — UV-sphere with smooth normals
+// Sphere - UV-sphere with smooth normals
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreateSphere(float radius, uint32_t slices, uint32_t stacks)
@@ -151,7 +151,7 @@ MeshData Primitives::CreateSphere(float radius, uint32_t slices, uint32_t stacks
 }
 
 // ---------------------------------------------------------------------------
-// Plane — flat quad on the XZ plane, normal pointing +Y
+// Plane - flat quad on the XZ plane, normal pointing +Y
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreatePlane(float width, float depth)
@@ -171,7 +171,7 @@ MeshData Primitives::CreatePlane(float width, float depth)
 }
 
 // ---------------------------------------------------------------------------
-// Cylinder — open-ended cylinder along the Y axis
+// Cylinder - open-ended cylinder along the Y axis
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreateCylinder(float radius, float height, uint32_t slices)
@@ -243,7 +243,7 @@ MeshData Primitives::CreateCylinder(float radius, float height, uint32_t slices)
 }
 
 // ---------------------------------------------------------------------------
-// Torus — ring around the Y axis
+// Torus - ring around the Y axis
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreateTorus(float majorRadius, float minorRadius, uint32_t majorSegments, uint32_t minorSegments)
@@ -301,7 +301,7 @@ MeshData Primitives::CreateTorus(float majorRadius, float minorRadius, uint32_t 
 }
 
 // ---------------------------------------------------------------------------
-// TorusKnot — tube swept along a (p,q) torus-knot spine
+// TorusKnot - tube swept along a (p,q) torus-knot spine
 // ---------------------------------------------------------------------------
 
 MeshData Primitives::CreateTorusKnot(int p, int q, float majorRadius, float minorRadius, float tubeRadius,
@@ -334,7 +334,7 @@ MeshData Primitives::CreateTorusKnot(int p, int q, float majorRadius, float mino
                 drm * sinPt + fp * rm * cosPt};
     };
 
-    // Generate exactly pathSegments rings — no duplicate first/last ring.
+    // Generate exactly pathSegments rings - no duplicate first/last ring.
     // Seam closure is handled by modulo wrapping in the index loop below.
     for (uint32_t i = 0; i < pathSegments; ++i)
     {
@@ -351,7 +351,7 @@ MeshData Primitives::CreateTorusKnot(int p, int q, float majorRadius, float mino
         XMVECTOR B      = XMVector3Normalize(XMVector3Cross(T, radial));
         XMVECTOR N      = XMVector3Cross(B, T); // already unit length
 
-        // Generate tubeSegments vertices per ring — no duplicate first/last vertex.
+        // Generate tubeSegments vertices per ring - no duplicate first/last vertex.
         // Seam closure handled by modulo wrapping below.
         for (uint32_t j = 0; j < tubeSegments; ++j)
         {
@@ -371,7 +371,7 @@ MeshData Primitives::CreateTorusKnot(int p, int q, float majorRadius, float mino
         }
     }
 
-    // Wrap both axes with modulo — no seam from duplicate vertices
+    // Wrap both axes with modulo - no seam from duplicate vertices
     for (uint32_t i = 0; i < pathSegments; ++i)
     {
         uint32_t ni = (i + 1) % pathSegments;
