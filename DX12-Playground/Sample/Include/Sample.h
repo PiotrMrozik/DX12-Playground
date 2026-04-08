@@ -7,6 +7,7 @@
 #include <ECS/Systems/TransformSystem.h>
 #include <ECS/Systems/RenderableSystem.h>
 #include <ECS/Systems/FrameContext.h>
+#include <UI/ComponentInspectorRegistry.h>
 
 class Sample : public Game
 {
@@ -19,7 +20,6 @@ public:
 protected:
     virtual void OnUpdate(UpdateEventArgs& e) override;
     virtual void OnRender(RenderEventArgs& e) override;
-    virtual void OnImGui() override;
 
 private:
     // Clear helpers (thin wrappers kept in Sample)
@@ -42,4 +42,5 @@ private:
 
     FrameContext m_FrameCtx;
 
+    ComponentInspectorRegistry m_InspectorRegistry;
 };

@@ -20,6 +20,10 @@ using namespace Microsoft::WRL;
 #include <ECS/Systems/FrameContext.h>
 #include <ECS/Prefabs/MeshObjectPrefab.h>
 
+#include <UI/StatsPanel.h>
+#include <UI/SceneHierarchyPanel.h>
+#include <UI/InspectorPanel.h>
+
 #include <algorithm>
 #if defined(min)
 #undef min
@@ -43,7 +47,7 @@ bool Sample::LoadContent()
 
     // Upload primitive meshes via the registry.
     std::vector<ComPtr<ID3D12Resource>> intermediates;
-    uint32_t cubeIndex = m_MeshRegistry.Add(Primitives::CreateCube(1.0f), device, commandList, intermediates);
+    uint32_t cubeIndex = m_MeshRegistry.Add(Primitives::CreateTorus(), device, commandList, intermediates);
 
     // Load shaders.
     ComPtr<ID3DBlob> vertexShaderBlob;
@@ -69,12 +73,12 @@ bool Sample::LoadContent()
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
                                                     D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-                                                    D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-                                                    D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+                                                    D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-    CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+    CD3DX12_ROOT_PARAMETER1 rootParameters[3];
     rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: World
     rootParameters[1].InitAsConstants(sizeof(XMMATRIX) / 4, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b1: VP
+    rootParameters[2].InitAsConstants(sizeof(XMFLOAT4) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);  // b0: CameraPos (PS)
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
@@ -141,7 +145,7 @@ bool Sample::LoadContent()
     }
 
     // --- ECS: create cube entities ---
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 1; ++i)
     {
         float px    = static_cast<float>(rand() % 10 - 5);
         float py    = static_cast<float>(rand() % 10 - 5);
@@ -150,7 +154,8 @@ bool Sample::LoadContent()
 
         MeshObjectPrefab{
             "Cube",
-            TransformComponent{ {px, py, pz}, {}, {scale, scale, scale} },
+           // TransformComponent{ {px, py, pz}, {}, {scale, scale, scale} },
+            TransformComponent{ {0, 0, 0}, {}, {3, 3, 3} },
             MeshComponent(cubeIndex)
         }.Spawn(m_World);
     }
@@ -159,6 +164,29 @@ bool Sample::LoadContent()
     m_Camera.target = { 0.f, 0.f, 0.f };
     m_Camera.radius = 10.f;
     m_Camera.fovY   = XMConvertToRadians(m_FoV);
+
+    // --- UI: register component inspectors ---
+    m_InspectorRegistry.Register<TransformComponent>(m_World, "Transform");
+    m_InspectorRegistry.Register<TagComponent>(m_World, "Tag");
+    m_InspectorRegistry.Register<MeshComponent>(m_World, "Mesh");
+
+    // --- UI: build panel layout ---
+    auto& ui = GetUILayer();
+
+    ui.AddPanel(std::make_unique<StatsPanel>());
+
+    auto hierarchy = std::make_unique<SceneHierarchyPanel>(m_World);
+    auto* hierarchyPtr = hierarchy.get();
+    ui.AddPanel(std::move(hierarchy));
+
+    ui.AddPanel(std::make_unique<InspectorPanel>(*hierarchyPtr, m_InspectorRegistry, m_World));
+
+    ui.AddCustomPanel("Camera", [this]() {
+        ImGui::Begin("Camera");
+        ImGui::SliderFloat("Radius", &m_Camera.radius, 1.0f, 50.0f);
+        ImGui::SliderFloat("FoV",    &m_FoV,           12.0f, 90.0f);
+        ImGui::End();
+    });
 
     m_ContentLoaded = true;
 
@@ -172,17 +200,6 @@ void Sample::UnloadContent()
     m_ContentLoaded = false;
 }
 
-void Sample::OnImGui()
-{
-    ImGui::ShowDemoWindow();
-    ImGui::Begin("Sample");
-    ImGui::Text("%.1f FPS  (%.2f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-    ImGui::Separator();
-    ImGui::Text("Camera");
-    ImGui::SliderFloat("Radius",    &m_Camera.radius, 1.0f, 50.0f);
-    ImGui::SliderFloat("FoV",       &m_FoV,           12.0f, 90.0f);
-    ImGui::End();
-}
 
 void Sample::OnUpdate(UpdateEventArgs& e)
 {
@@ -191,9 +208,9 @@ void Sample::OnUpdate(UpdateEventArgs& e)
     for (Entity entity : m_TransformSystem->entities)
     {
         auto& tc = m_World.GetComponent<TransformComponent>(entity);
-        tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
+       // tc.rotation.y += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 90.0 ));
         tc.rotation.x += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 45.0 ));
-        tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
+        //tc.rotation.z += XMConvertToRadians(static_cast<float>(e.ElapsedTime * 30.0 ));
     }
 
     // Sync FoV (may have changed via mouse wheel).
@@ -203,6 +220,8 @@ void Sample::OnUpdate(UpdateEventArgs& e)
     float aspectRatio = GetClientWidth() / static_cast<float>(GetClientHeight());
     m_FrameCtx.Reset();
     m_FrameCtx.viewProj = m_Camera.GetViewProjMatrix(aspectRatio);
+    auto camPos = m_Camera.GetPosition();
+    m_FrameCtx.cameraPos = { camPos.x, camPos.y, camPos.z, 1.f };
     m_TransformSystem->Update(m_World);
     m_RenderableSystem->Update(m_World, m_FrameCtx);
 }
@@ -250,6 +269,7 @@ void Sample::OnRender(RenderEventArgs& e)
     commandList->OMSetRenderTargets(1, &msaaRtv, FALSE, &dsv);
 
     commandList->SetGraphicsRoot32BitConstants(1, sizeof(XMMATRIX) / 4, &m_FrameCtx.viewProj, 0);
+    commandList->SetGraphicsRoot32BitConstants(2, sizeof(XMFLOAT4) / 4, &m_FrameCtx.cameraPos, 0);
 
     for (const auto& entry : m_FrameCtx.renderList)
     {
