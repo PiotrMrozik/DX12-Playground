@@ -34,6 +34,7 @@ struct RenderEntry
 struct FrameContext
 {
     DirectX::XMMATRIX                viewProj{ DirectX::XMMatrixIdentity() };
+    DirectX::XMFLOAT4                cameraPos{ 0.f, 0.f, 0.f, 1.f };
     std::vector<DirectionalLightData> directionalLights;
     std::vector<PointLightData>       pointLights;
     std::vector<RenderEntry>          renderList;
@@ -42,6 +43,7 @@ struct FrameContext
     void Reset()
     {
         viewProj = DirectX::XMMatrixIdentity();
+        cameraPos = { 0.f, 0.f, 0.f, 1.f };
         directionalLights.clear();
         pointLights.clear();
         renderList.clear();
